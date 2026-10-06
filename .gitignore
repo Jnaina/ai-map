@@ -1,0 +1,6 @@
+data/stories-cache.json
+logs/
+.DS_Store
+__pycache__/
+data/llm-cache.json
+.env

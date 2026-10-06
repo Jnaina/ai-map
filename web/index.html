@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jag's AI Map: what's heating up in AI</title>
+<meta name="description" content="An interactive map of the AI companies, models, products, people and ideas getting the most attention in English-language news over the last 7 days.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="bar">
+  <div class="brand">
+    <h1>JAG'S AI MAP</h1>
+    <span class="tag">what's heating up in AI · last 7 days</span>
+  </div>
+  <div class="controls">
+    <input id="search" type="search" placeholder="Search a company, model, person…" list="labels" autocomplete="off" aria-label="Search the map">
+    <datalist id="labels"></datalist>
+    <select id="status" aria-label="Filter by status">
+      <option value="all">All</option>
+      <option value="new">New this week</option>
+      <option value="rising">Rising</option>
+    </select>
+    <button id="aboutBtn" class="ghost" aria-haspopup="dialog">About</button>
+  </div>
+</header>
+
+<div id="types" class="chips" aria-label="Filter by type"></div>
+
+<main id="stage" aria-label="Map of AI topics. Drag to move nodes, scroll to zoom, click a node for details."></main>
+
+<aside id="panel" hidden aria-live="polite">
+  <button id="closePanel" class="close" aria-label="Close details">×</button>
+  <div id="panelBody"></div>
+</aside>
+
+<footer id="legend">
+  <span>◇ topic</span>
+  <span class="acc">◆ hottest topic</span>
+  <span>● entity · darker = hotter</span>
+  <span><span class="acc">○</span> new this week</span>
+  <span>↑ rising · ↓ cooling (vs 24 h ago)</span>
+  <span id="updated"></span>
+</footer>
+
+<dialog id="about">
+  <form method="dialog"><button class="close" aria-label="Close">×</button></form>
+  <h2>About Jag's AI Map</h2>
+  <p>An interactive map of the AI companies, models, products, people, hardware and ideas that are getting the most attention in English-language AI news and developer communities. Bigger, closer to the centre and more connected means more talked about.</p>
+  <h3>How heat works</h3>
+  <p>Every story adds heat to each entity it mentions, weighted by source and popularity (Hacker News points, Hugging Face upvotes, GitHub stars). Heat cools with a <b><span id="hl">24</span>-hour half-life</b>, so the map reflects the last few days of a 7-day window. Links join entities that appear in the same stories. <b>New</b> (orange ring) marks entities first spotted this week; <b>↑</b> means heat is at least 1.5× what it was 24 hours earlier, <b>↓</b> that it has cooled. Topics are drawn as diamonds; the hottest topic is filled orange and its closest connections are outlined.</p>
+  <h3>Sources this run</h3>
+  <ul id="srcList"></ul>
+  <p class="muted">Built independently; inspired by <a href="https://aimap.goodcase.ai" target="_blank" rel="noopener">AI MAP by carlwow</a>. Not affiliated with any company shown. Graph rendering by <a href="https://d3js.org" target="_blank" rel="noopener">D3</a> (ISC licence).</p>
+</dialog>
+
+<script src="vendor/d3.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

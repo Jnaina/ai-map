@@ -1,0 +1,32 @@
+# Refresh the map every 12 hours and publish web/ to GitHub Pages.
+# Note: GitHub's runners can't reach a private LLM (e.g. one on your Tailscale network), so the
+# cloud refresh uses dictionary + discovery extraction unless AIMAP_LLM_* secrets point to a public endpoint.
+name: update-map
+on:
+  schedule: [{ cron: "17 */12 * * *" }]
+  workflow_dispatch:
+permissions: { contents: write, pages: write, id-token: write }
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Build data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AIMAP_LLM_BASE_URL: ${{ secrets.AIMAP_LLM_BASE_URL }}
+          AIMAP_LLM_MODEL: ${{ secrets.AIMAP_LLM_MODEL }}
+          AIMAP_LLM_API_KEY: ${{ secrets.AIMAP_LLM_API_KEY }}
+        run: python pipeline/build.py
+      - name: Commit data
+        run: |
+          git config user.name "ai-map bot"; git config user.email "actions@users.noreply.github.com"
+          git add web/data/data.json data/history.json
+          git diff --cached --quiet || git commit -m "data: refresh $(date -u +%FT%H:%MZ)"
+          git push
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: web }
+      - id: deploy
+        uses: actions/deploy-pages@v4

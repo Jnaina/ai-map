@@ -104,17 +104,23 @@ def fetch_rss(name, url, weight, since, log):
     return out
 
 
-def fetch_hn(since, log, min_points=30):
+def fetch_hn(since, log, min_points=30, early_points=10, early_hours=3):
+    """Stories above `min_points`, plus fresh ones (< early_hours old) above `early_points`,
+    so a breakout is caught while it's still climbing."""
     out, page = [], 0
-    while page < 3:
+    now = time.time()
+    while page < 5:
         q = urllib.parse.urlencode({"tags": "story", "hitsPerPage": 1000, "page": page,
-                                    "numericFilters": f"created_at_i>{int(since)},points>{min_points}"})
+                                    "numericFilters": f"created_at_i>{int(since)},points>{early_points}"})
         try:
             data = json.loads(_get("https://hn.algolia.com/api/v1/search_by_date?" + q))
         except Exception as e:
             log(f"  ! Hacker News: {str(e)[:80]}")
             break
         for h in data.get("hits", []):
+            pts, created = h.get("points") or 0, h.get("created_at_i", 0)
+            if pts <= min_points and now - created > early_hours * 3600:
+                continue
             title = h.get("title") or ""
             url = h.get("url") or f"https://news.ycombinator.com/item?id={h.get('objectID')}"
             out.append(dict(id=f"hn:{h.get('objectID')}", title=title, url=url, source="Hacker News",
@@ -124,7 +130,7 @@ def fetch_hn(since, log, min_points=30):
         page += 1
         if page >= data.get("nbPages", 0):
             break
-    log(f"  Hacker News: {len(out)} stories (>{min_points} points)")
+    log(f"  Hacker News: {len(out)} stories (>{min_points} points, or >{early_points} if under {early_hours} h old)")
     return out
 
 

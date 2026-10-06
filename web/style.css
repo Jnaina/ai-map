@@ -35,6 +35,13 @@ button.ghost{background:transparent}
 .node.sel .dot{stroke:var(--ink);stroke-width:1.5}
 .label{font-family:var(--mono);pointer-events:none;paint-order:stroke;stroke:var(--bg);stroke-width:3px;stroke-linejoin:round}
 .label.topic{font-size:14px;font-weight:600;fill:var(--ink)}
+.views{display:flex;border:1px solid var(--ink)}
+.views a{padding:5px 10px;font-size:12px;text-decoration:none;color:var(--ink)}
+.views a.on{background:var(--ink);color:var(--bg)}
+.label.breaking{fill:var(--accent)!important;font-weight:700}
+.breakring{fill:none;stroke:var(--accent);stroke-width:1.5;animation:pulse 1.6s ease-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes pulse{0%{transform:scale(.7);opacity:.9}100%{transform:scale(1.9);opacity:0}}
+.badge.breaking{color:var(--accent);font-weight:700}
 .hull{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1;stroke-dasharray:6 5}
 .hullTag rect{fill:#fff;stroke:var(--ink);stroke-width:1}
 .hullTag text{font-family:var(--mono);font-size:12px;fill:var(--ink)}

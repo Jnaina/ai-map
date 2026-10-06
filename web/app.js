@@ -14,9 +14,11 @@
   const TYPE_LABEL = { "Concept": "Topics" };
 
   let selected = null; // declared first: zoom and filters read it
+  const view = new URLSearchParams(location.search).get("view") === "today" ? "today" : "week";
+  document.querySelectorAll(".views a").forEach((a) => a.classList.toggle("on", a.dataset.view === view));
   let data;
   try {
-    data = await (await fetch("data/data.json", { cache: "no-store" })).json();
+    data = await (await fetch(view === "today" ? "data/today.json" : "data/data.json", { cache: "no-store" })).json();
   } catch (e) {
     $("#stage").innerHTML = '<p style="padding:120px 24px;color:#6f6f6f">No data yet. Run ./run.sh to build the map.</p>';
     return;
@@ -40,7 +42,11 @@
   const hottestTopic = nodes.filter((n) => n.topic).sort((a, b) => b.heat - a.heat)[0];
   const arrow = (d) => (d.trend >= 1.5 ? " ↑" : d.trend <= 0.75 ? " ↓" : "");
 
-  $("#updated").textContent = `updated ${ago(data.generated_at)} · ${data.story_count} stories · refreshes hourly`;
+  const lag = data.trend_lag_hours || 24;
+  document.querySelector(".tag").textContent = view === "today" ? "what's hot in AI right now · last 24 hours" : "what's heating up in AI · last 7 days";
+  $("#legTrend").textContent = `↑ rising · ↓ cooling (vs ${lag} h ago)`;
+  const nBreaking = nodes.filter((n) => n.breaking).length;
+  $("#updated").textContent = `updated ${ago(data.generated_at)} · ${data.story_count} stories · refreshes hourly${nBreaking ? ` · ${nBreaking} breaking` : ""}`;
   $("#hl").textContent = data.half_life_hours;
   $("#srcList").innerHTML = Object.entries(data.sources).map(([s, n]) => `<li>${esc(s)}: ${n}</li>`).join("");
   $("#labels").innerHTML = nodes.map((n) => `<option value="${esc(n.label)}">`).join("");
@@ -74,11 +80,12 @@
   nodeSel.filter((d) => !d.topic).append("circle").attr("class", "dot").attr("r", (d) => d.size).attr("fill", (d) => d.tone);
   nodeSel.filter((d) => d.status === "new").append("circle").attr("class", "newring")
     .attr("r", (d) => (d.topic ? d.size * 0.95 : d.size + 5));
+  nodeSel.filter((d) => d.breaking).append("circle").attr("class", "breakring").attr("r", (d) => (d.topic ? d.size : d.size + 7));
   // invisible hit area so small dots are easy to click
   nodeSel.append("circle").attr("r", (d) => Math.max(10, d.size)).attr("fill", "transparent");
 
   const labelSel = root.append("g").selectAll("text").data(nodes, (d) => d.id).join("text")
-    .attr("class", (d) => "label" + (d.topic ? " topic" : ""))
+    .attr("class", (d) => "label" + (d.topic ? " topic" : "") + (d.breaking ? " breaking" : ""))
     .attr("text-anchor", "middle")
     .attr("dy", (d) => (d.topic ? d.size * 0.72 + 17 : d.size + 13))
     .attr("font-size", (d) => (d.topic ? null : 10.5 + 2.5 * Math.sqrt(d.heat_norm) + "px"))
@@ -151,21 +158,23 @@
     const [x0, x1] = d3.extent(vis, (d) => d.x), [y0, y1] = d3.extent(vis, (d) => d.y);
     const padX = Math.min(120, W() * 0.06);
     const padTop = document.querySelector("#types").getBoundingClientRect().bottom + 24;
-    const padBottom = W() > 760 ? 60 : 20;
+    const padBottom = W() > 760 ? 95 : 20;
     const k = Math.max(W() > 760 ? 0.3 : 0.55, Math.min((W() - 2 * padX) / Math.max(1, x1 - x0), (H() - padTop - padBottom) / Math.max(1, y1 - y0), 1.6));
     const t = d3.zoomIdentity.translate(W() / 2, padTop + (H() - padTop - padBottom) / 2).scale(k).translate(-(x0 + x1) / 2, -(y0 + y1) / 2);
     (animate ? svg.transition().duration(500) : svg).call(zoom.transform, t);
   }
-  svg.call(zoom.transform, d3.zoomIdentity.translate(W() / 2, H() / 2).scale(0.6));
-  sim.on("end", () => { if (!userMoved) fit(false); });
-  setTimeout(() => { if (!userMoved) fit(false); }, 2500);
+  // settle the layout before showing it: deterministic, no wobble, and the fit sees final positions
+  sim.stop();
+  sim.tick(320);
+  sim.on("tick").call(sim);
+  fit(false);
   window.addEventListener("resize", () => fit(false));
   svg.on("click", () => select(null));
 
   // ---- filtering
   function visible(d) {
     const st = $("#status").value;
-    return activeTypes.has(d.type) && (st === "all" || d.status === st);
+    return activeTypes.has(d.type) && (st === "all" || (st === "breaking" ? !!d.breaking : d.status === st));
   }
   function applyFilters() {
     nodeSel.style("display", (d) => (visible(d) ? null : "none"));
@@ -200,12 +209,13 @@
 
   function renderPanel(d) {
     const nb = [...neigh.get(d.id).entries()].sort((a, b) => b[1] - a[1]).slice(0, 16).map(([id]) => byId.get(id));
-    const trendTxt = d.trend >= 9.9 ? "new in last 24 h" : `${d.trend >= 1 ? "+" : ""}${Math.round((d.trend - 1) * 100)}% vs 24 h ago`;
+    const trendTxt = d.trend >= 9.9 ? `new in last ${lag} h` : `${d.trend >= 1 ? "+" : ""}${Math.round((d.trend - 1) * 100)}% vs ${lag} h ago`;
     const parent = d.parent && byId.get(d.parent);
     $("#panelBody").innerHTML = `
       <h2>${esc(d.label)}${arrow(d)}</h2>
       <div class="badges">
         <span>${esc(d.topic ? "topic" : d.type.toLowerCase())}</span>
+        ${d.breaking ? `<span class="badge breaking">breaking: ${d.breaking.last6h} stories in last 6 h (${d.breaking.ratio}× the 6 h before)</span>` : ""}
         ${d.status === "new" ? '<span class="badge new">new this week</span>' : ""}
         ${d.status === "rising" ? '<span class="badge rising">rising</span>' : ""}
         ${parent ? `<span>part of ${esc(parent.label)}</span>` : ""}
@@ -213,7 +223,7 @@
       <div class="stats">
         <div class="stat"><b>#${d.rank}</b><span>of ${nodes.length} by heat</span></div>
         <div class="stat"><b>${d.heat.toFixed(1)}</b><span>${esc(trendTxt)}</span></div>
-        <div class="stat"><b>${d.stories}</b><span>stories this week</span></div>
+        <div class="stat"><b>${d.stories}</b><span>stories ${view === "today" ? "today" : "this week"}</span></div>
       </div>
       ${spark(d.series)}
       <p class="meta">first spotted ${new Date(d.first_seen).toLocaleDateString(undefined, { day: "numeric", month: "short" })} · ${Object.entries(d.sources).map(([s, n]) => `${esc(s)} ${n}`).join(" · ")}</p>

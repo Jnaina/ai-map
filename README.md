@@ -25,6 +25,11 @@ Needs only Python 3 (standard library). `web/` is a static site: D3 is vendored 
 - **LLM extraction** (optional): any OpenAI-compatible endpoint, e.g. a local Qwen3.8-Flash. `run.sh` reads it from
   `.env` or, if present, the `strata` provider in a [pi](https://pi.dev) config (`~/.pi/agent/models.json`). Override with `AIMAP_LLM_BASE_URL`, `AIMAP_LLM_MODEL`,
   `AIMAP_LLM_API_KEY`, or disable with `AIMAP_LLM=off`.
+- **Two views**: **Week** (`web/data/data.json`: 7 days, 24 h half-life, trend vs 24 h ago) and
+  **Today** (`web/data/today.json`: 24 h, 6 h half-life, trend vs 6 h ago), switched in the page header.
+- **Breaking**: an entity with at least 2 stories and 2.5x more (weighted) attention in the last 6 h than
+  in the 6 h before gets an orange name and a pulsing ring, and can be filtered on. Hacker News stories
+  under 3 h old count from 10 points (instead of 30) so breakouts are caught early.
 - **Heat** (`pipeline/build.py`): each story adds `source weight x popularity boost x 0.5^(age/24h)`
   to every entity it mentions. "New" = not in the dictionary and first seen this week; up arrow =
   heat at least 1.5x its value 24 h earlier. Links = entities mentioned in the same stories.

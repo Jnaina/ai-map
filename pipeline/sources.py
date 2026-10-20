@@ -110,6 +110,8 @@ RSS_FEEDS = [
     ("SCMP Tech", "https://www.scmp.com/rss/36/feed", 0.9),  # South China Morning Post tech section (AI-topic feed is 404)
     ("TechNode", "https://technode.com/feed/", 0.7),  # China startup/tech news (high volume -> capped)
     ("Pandaily", "https://pandaily.com/feed/", 0.7),  # Beijing tech news
+    ("Import AI", "https://importai.substack.com/feed", 1.0),  # Jack Clark (Anthropic co-founder): weekly AI research + policy
+    ("Data Center Knowledge", "https://www.datacenterknowledge.com/rss.xml", 0.8),  # authoritative DC trade press; AI-gated (hyperscale/GPU/power-for-AI)
 ]
 
 # Feeds that are NOT AI-only (general tech/research/news). Stories from these are kept only
@@ -120,6 +122,7 @@ AI_FILTER_SOURCES = {
     "The Information", "Semafor", "Platformer", "SemiAnalysis",
     "Quanta Magazine", "404 Media", "Databricks", "CSET",
     "ChinaTalk", "Interconnected", "SCMP Tech", "TechNode", "Pandaily",
+    "Data Center Knowledge",
 }
 
 # Per-feed caps: keep only the N most recent items from a firehose source so it can't

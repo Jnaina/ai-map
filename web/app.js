@@ -46,7 +46,9 @@
   document.querySelector(".tag").textContent = view === "today" ? "what's hot in AI right now · last 24 hours" : "what's heating up in AI · last 7 days";
   $("#legTrend").textContent = `↑ rising · ↓ cooling (vs ${lag} h ago)`;
   const nBreaking = nodes.filter((n) => n.breaking).length;
-  $("#updated").textContent = `updated ${ago(data.generated_at)} · ${data.story_count} stories · refreshes hourly${nBreaking ? ` · ${nBreaking} breaking` : ""}`;
+  $("#updated").innerHTML = `updated ${esc(ago(data.generated_at))} · ${data.story_count} stories · refreshes hourly`
+    + (nBreaking ? ` · <button id="breakingBtn" class="linklike" title="Show the breaking entities">${nBreaking} breaking</button>` : "");
+  if (nBreaking) $("#breakingBtn").addEventListener("click", renderBreakingPanel);
   $("#hl").textContent = data.half_life_hours;
   $("#srcList").innerHTML = Object.entries(data.sources).map(([s, n]) => `<li>${esc(s)}: ${n}</li>`).join("");
   $("#labels").innerHTML = nodes.map((n) => `<option value="${esc(n.label)}">`).join("");
@@ -315,6 +317,38 @@
       archive.sort((x, y) => new Date(y.published) - new Date(x.published));
     } catch (e) { /* archive unavailable: search just falls back to nodes only */ }
     return archive;
+  }
+
+  function renderBreakingPanel() {
+    const br = nodes.filter((n) => n.breaking).sort((a, b) => (b.breaking.ratio || 0) - (a.breaking.ratio || 0));
+    select(null); // clear any node selection, then show our own panel
+    if (!br.length) {
+      $("#panelBody").innerHTML = `<h2>Breaking now</h2><p class="meta">Nothing is breaking right now.</p>`;
+      $("#panel").hidden = false;
+      return;
+    }
+    // Per entity, show only the latest news headline(s) driving the surge — prefer actual news
+    // articles over the mixed feed (HN discussions, GitHub repos, papers); newest first, max 2.
+    const latestNews = (d) => {
+      const all = d.top_stories || [];
+      const news = all.filter((s) => s.kind === "news");
+      return (news.length ? news : all).slice()
+        .sort((a, b) => new Date(b.published) - new Date(a.published)).slice(0, 2);
+    };
+    $("#panelBody").innerHTML = `
+      <h2>Breaking now</h2>
+      <div class="badges"><span>${br.length} ${br.length === 1 ? "entity" : "entities"} surging in the last 6 h</span></div>
+      ${br.map((d) => `
+        <div class="brk">
+          <h3 class="brkHead" data-id="${esc(d.id)}" role="button" tabindex="0" title="Show on the map">${esc(d.label)}
+            <span class="badge breaking">${d.breaking.last6h} in 6 h · ${d.breaking.ratio}×</span></h3>
+          <ul class="stories">${latestNews(d).map((s) => `
+            <li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>
+            <div class="meta">${esc(s.source)} · ${ago(s.published)}${s.discussion ? ` · <a href="${esc(s.discussion)}" target="_blank" rel="noopener">discussion</a>` : ""}</div></li>`).join("")}</ul>
+        </div>`).join("")}`;
+    $("#panel").hidden = false;
+    $("#panelBody").querySelectorAll(".brkHead").forEach((h) =>
+      h.addEventListener("click", () => focusNode(byId.get(h.dataset.id))));
   }
 
   function renderSearchPanel(query, hits) {

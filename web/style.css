@@ -81,6 +81,14 @@ button.ghost{background:transparent}
   max-width:calc(100vw - 24px);padding:8px 14px;
   background:var(--glass-solid);border:1px solid var(--glass-border);border-radius:14px;box-shadow:var(--glass-shadow)}
 #legend .acc{color:var(--accent)}
+/* clickable "N breaking" in the footer, and the breaking panel it opens */
+.linklike{font:inherit;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.linklike:hover{opacity:.8}
+.brk{padding-top:6px}
+.brk + .brk{border-top:1px dashed var(--faint);margin-top:6px}
+.brkHead{cursor:pointer}
+.brkHead:hover{text-decoration:underline}
+.brkHead .badge.breaking{font-weight:600;font-size:10px;margin-left:4px}
 dialog{background:#fff;color:var(--ink);border:1px solid var(--ink);border-radius:0;max-width:560px;padding:22px 24px;font:13px/1.55 var(--mono)}
 dialog::backdrop{background:#f6f5f2cc}
 dialog h2{margin-top:0;font-size:16px}

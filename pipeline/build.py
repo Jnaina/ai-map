@@ -27,8 +27,9 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(__file__))
+import articles_db  # noqa: E402
 from entities import AI_RX, Recogniser, llm_extract  # noqa: E402
-from sources import fetch_all  # noqa: E402
+from sources import AI_FILTER_SOURCES, fetch_all  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT, "web", "data")
@@ -207,14 +208,22 @@ def main():
     rec = Recogniser()
     mentions = {s["id"]: rec.find(s) for s in stories}
 
-    # Hacker News covers everything; keep a discussion only if it is about AI: an AI keyword,
-    # or an AI-specific entity (not just "Apple"/"Amazon" or a generic topic like "jobs")
+    # "AI-specific" entity: not just a big-tech name ("Apple"/"Amazon") or a generic concept.
     def ai_specific(e):
         return e not in NOT_AI_SPECIFIC and rec.ents[e]["type"] != "Concept" or e in AI_CONCEPTS
+
+    def ai_relevant(s):
+        return bool(AI_RX.search(s.get("text") or s["title"] or "")) \
+            or any(ai_specific(e) for e in mentions[s["id"]])
+
+    # Hacker News covers everything, and the general-interest feeds (AI_FILTER_SOURCES) aren't
+    # AI-only, so gate both on AI relevance. The curated AI-category feeds are trusted as-is.
+    def needs_ai_filter(s):
+        return s["kind"] == "discussion" or s["source"] in AI_FILTER_SOURCES
     before = len(stories)
-    stories = [s for s in stories if s["kind"] != "discussion" or AI_RX.search(s["title"])
-               or any(ai_specific(e) for e in mentions[s["id"]])]
-    print(f"Kept {len(stories)} of {before} stories after dropping off-topic Hacker News items")
+    stories = [s for s in stories if not needs_ai_filter(s) or ai_relevant(s)]
+    print(f"Kept {len(stories)} of {before} stories after AI-relevance gate "
+          f"(Hacker News + general-interest feeds)")
     for sid, extra in llm_extract(stories, rec).items():
         mentions[sid] |= extra
 
@@ -226,6 +235,15 @@ def main():
         build_view(v, stories, mentions, rec, now, hist, breaking, stamp)
     hist["runs"] = (hist["runs"] + [stamp])[-200:]
     json.dump(hist, open(HISTORY, "w"))
+
+    # Archive every link that fed the map into SQLite, then export the last 30 days
+    # for the Articles page. Never let this break the map build.
+    try:
+        articles_db.record(stories)
+        articles_db.export_recent()
+        articles_db.write_new_counts()
+    except Exception as e:
+        print(f"[articles] skipped: {e}")
 
 
 if __name__ == "__main__":

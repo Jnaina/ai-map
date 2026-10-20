@@ -51,6 +51,19 @@
   $("#srcList").innerHTML = Object.entries(data.sources).map(([s, n]) => `<li>${esc(s)}: ${n}</li>`).join("");
   $("#labels").innerHTML = nodes.map((n) => `<option value="${esc(n.label)}">`).join("");
 
+  // small red tally under the Articles button: how many articles were discovered in the last hour
+  (async () => {
+    try {
+      const nc = await (await fetch("data/new_counts.json", { cache: "no-store" })).json();
+      const el = $("#newcount");
+      if (el && nc && nc.new_last_hour > 0) {
+        el.textContent = `+${nc.new_last_hour} new`;
+        el.title = `${nc.new_last_hour} new articles in the last hour`;
+        el.hidden = false;
+      }
+    } catch (e) { /* no counts file yet */ }
+  })();
+
   // ---- type filter (text toggles)
   const activeTypes = new Set(TYPES);
   const present = TYPES.filter((t) => nodes.some((n) => n.type === t));

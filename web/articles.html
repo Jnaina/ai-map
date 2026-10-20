@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jag's AI Map: articles</title>
+<meta name="description" content="Every article that fed Jag's AI Map over the last 30 days, grouped by source. Click a source on the left to read its articles on the right.">
+<link rel="stylesheet" href="articles.css?v=3">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#3b82f6">
+</head>
+<body>
+<header id="bar">
+  <div class="brand">
+    <h1>JAG'S AI MAP</h1>
+    <span class="tag">articles · last 30 days</span>
+  </div>
+  <div class="controls">
+    <input id="search" type="search" placeholder="Filter headlines…" autocomplete="off" aria-label="Filter headlines">
+    <a class="maplink" href="index.html">← Map</a>
+  </div>
+</header>
+
+<main id="wrap">
+  <aside id="sources" aria-label="Sources">
+    <nav id="srcNav"></nav>
+  </aside>
+  <section id="list" aria-live="polite">
+    <div id="listHead"></div>
+    <ol id="articles"></ol>
+    <p id="empty" hidden>No articles.</p>
+  </section>
+</main>
+
+<script src="articles.js?v=3"></script>
+</body>
+</html>

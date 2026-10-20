@@ -18,3 +18,10 @@ if [ -n "$AIMAP_LLM_BASE_URL" ] && ! curl -s --max-time 6 -o /dev/null -H "Autho
 fi
 mkdir -p logs
 python3 pipeline/build.py "$@" 2>&1 | tee "logs/build-$(date +%Y%m%d-%H%M).log"
+
+# Optional: push the freshly built static site to Cloudflare Pages (set AIMAP_DEPLOY=pages
+# in .env once the Pages project is set up). Best-effort: a deploy failure never fails the build.
+if [ "${AIMAP_DEPLOY:-}" = "pages" ]; then
+  echo "Deploying to Cloudflare Pages..."
+  ./pages/build-deploy.sh 2>&1 | tee "logs/deploy-$(date +%Y%m%d-%H%M).log" || echo "Pages deploy failed (continuing)"
+fi

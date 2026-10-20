@@ -63,6 +63,26 @@ def connect(db_path=DB_PATH):
     return conn
 
 
+def first_seen_map(urls, db_path=DB_PATH):
+    """{url: first_seen_unix} for the urls already in the archive (missing urls omitted).
+    Used by the build to give a real recency to items whose feed date was unreliable."""
+    urls = [u for u in urls if u]
+    if not urls:
+        return {}
+    conn = connect(db_path)
+    out = {}
+    try:
+        for i in range(0, len(urls), 400):  # stay under SQLite's bound-variable limit
+            chunk = urls[i:i + 400]
+            q = "SELECT url, first_seen FROM articles WHERE url IN (%s)" % ",".join("?" * len(chunk))
+            for url, fs in conn.execute(q, chunk):
+                if fs:
+                    out[url] = fs
+    finally:
+        conn.close()
+    return out
+
+
 def record(stories, db_path=DB_PATH, log=print):
     """Upsert every story (link) into the archive. URL is the identity; a link seen
     again updates its fields and `last_seen` but keeps the original `first_seen`."""
@@ -119,7 +139,7 @@ def export_recent(db_path=DB_PATH, out_path=EXPORT_PATH, days=EXPORT_DAYS, log=p
         dom = favicons.domain_for(s, a)
         sources.append({"source": s, "count": len(a), "domain": dom,
                         "favicon": favicons.ensure(dom, FAVICON_DIR, log=log)})
-    sources.sort(key=lambda x: (-x["count"], x["source"].lower()))
+    sources.sort(key=lambda x: x["source"].lower())  # alphabetical by source name
     data = dict(
         generated_at=datetime.fromtimestamp(time.time(), timezone.utc).isoformat(timespec="minutes"),
         days=days, total=total, sources=sources, articles=by_source)

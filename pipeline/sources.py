@@ -179,6 +179,7 @@ def _parse_date(s):
 
 def fetch_rss(name, url, weight, since, log):
     out = []
+    now_ts = time.time()
     try:
         root = ET.fromstring(_get(url))
     except Exception as e:
@@ -205,9 +206,13 @@ def fetch_rss(name, url, weight, since, log):
             summary = it.findtext("description") or ""
         if not title or not date or date < since:
             continue
-        date = min(date, time.time())  # a future pubDate (scraper quirk) must not amplify heat
+        # A future pubDate (e.g. a scraper that only knows the month and stamps it to the last day
+        # of the month) must not amplify heat or read as "just now". Clamp it and flag it so the
+        # build can substitute the real first-seen time from the archive DB.
+        imprecise = date > now_ts
+        date = min(date, now_ts)
         out.append(dict(id=link or title, title=_clean(title), url=link, source=name, kind="news",
-                        published=date, engagement=0, weight=weight,
+                        published=date, engagement=0, weight=weight, date_imprecise=imprecise,
                         text=_clean(title) + ". " + _clean(summary)[:400]))
     cap = FEED_CAPS.get(name)
     if cap and len(out) > cap:

@@ -152,7 +152,7 @@ def build_view(v, stories, mentions, rec, now, hist, breaking, stamp):
             sources=dict(sorted(by_source[e].items(), key=lambda x: -x[1])),
             series=hist["entities"][e]["series"][-24:],
             top_stories=[dict(title=s["title"], url=s["url"], source=s["source"], published=iso(s["published"]),
-                              discussion=s.get("discussion")) for _, s in best]))
+                              kind=s.get("kind"), discussion=s.get("discussion")) for _, s in best]))
 
     per = defaultdict(list)
     for (x, y), w in pair.items():
@@ -204,6 +204,21 @@ def main():
         stories = fetch_all(7)
         os.makedirs(os.path.dirname(CACHE), exist_ok=True)
         json.dump(stories, open(CACHE, "w"))
+
+    # Some scraped feeds (e.g. the Ai2/allenai feed) emit month-precision dates stamped to the last
+    # day of the month, which is in the future for the current month. fetch_rss clamped those to now
+    # and flagged them; give them a real, stable recency = when we first saw the link (so they age
+    # and label correctly instead of reading "just now" every run). Brand-new links keep "now".
+    imprecise = [s for s in stories if s.get("date_imprecise")]
+    if imprecise:
+        fs = articles_db.first_seen_map([s["url"] for s in imprecise])
+        fixed = 0
+        for s in imprecise:
+            seen = fs.get(s["url"])
+            if seen and seen < s["published"]:
+                s["published"] = seen
+                fixed += 1
+        print(f"Adjusted {fixed} of {len(imprecise)} future-dated links to their first-seen time")
 
     rec = Recogniser()
     mentions = {s["id"]: rec.find(s) for s in stories}

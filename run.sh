@@ -17,7 +17,16 @@ if [ -n "$AIMAP_LLM_BASE_URL" ] && ! curl -s --max-time 6 -o /dev/null -H "Autho
   unset AIMAP_LLM_BASE_URL
 fi
 mkdir -p logs
-python3 pipeline/build.py "$@" 2>&1 | tee "logs/build-$(date +%Y%m%d-%H%M).log"
+LOGFILE="logs/build-$(date +%Y%m%d-%H%M).log"
+python3 pipeline/build.py "$@" 2>&1 | tee "$LOGFILE"
+
+# Feed-health report: summarise feed intake/errors across the build logs (incl. this run)
+# into data/feed_health.json, and print any feeds needing attention. Best-effort.
+python3 pipeline/feed_health.py 2>&1 | tee -a "$LOGFILE" || true
+
+# Log rotation: keep ~14 days of per-run build/deploy logs.
+find logs -name 'build-*.log' -mtime +14 -delete 2>/dev/null || true
+find logs -name 'deploy-*.log' -mtime +14 -delete 2>/dev/null || true
 
 # Optional: push the freshly built static site to Cloudflare Pages (set AIMAP_DEPLOY=pages
 # in .env once the Pages project is set up). Best-effort: a deploy failure never fails the build.

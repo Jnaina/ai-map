@@ -112,6 +112,9 @@ RSS_FEEDS = [
     ("Pandaily", "https://pandaily.com/feed/", 0.7),  # Beijing tech news
     ("Import AI", "https://importai.substack.com/feed", 1.0),  # Jack Clark (Anthropic co-founder): weekly AI research + policy
     ("Data Center Knowledge", "https://www.datacenterknowledge.com/rss.xml", 0.8),  # authoritative DC trade press; AI-gated (hyperscale/GPU/power-for-AI)
+    # O'Reilly Radar blocks our fetcher at the edge (Akamai 403), so pull it through the public
+    # morss.it proxy. Best-effort: if morss is down/slow the source just skips that hour.
+    ("O'Reilly Radar", "https://morss.it/:proxy:format=rss/https://www.oreilly.com/radar/topics/ai-ml/feed/", 1.0),
 ]
 
 # Feeds that are NOT AI-only (general tech/research/news). Stories from these are kept only
@@ -132,6 +135,14 @@ FEED_CAPS = {
     "MarkTechPost": 20,  # publishes many AI posts/day; cap so it can't flood the window
     "TechNode": 40,  # ~2000-item firehose of general China tech; cap after the AI-relevance gate
 }
+
+# Feeds to fetch at most once every N hours (the pipeline runs hourly). Between live fetches the
+# last good result is reused, so the feed stays in the map without being hit every run. Use this
+# for sources that rate-limit us (e.g. VentureBeat returns HTTP 429 on an hourly cadence).
+FEED_INTERVAL_HOURS = {
+    "VentureBeat AI": 2,
+}
+FEED_CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "feed-cache")
 
 GITHUB_TOPICS = ["llm", "ai-agents", "agents", "generative-ai", "mcp", "large-language-models", "rag", "ai"]
 
@@ -306,6 +317,37 @@ def fetch_github(since, log):
     return out
 
 
+def _fetch_rss_throttled(name, url, weight, since, interval_h, log):
+    """Fetch at most once per `interval_h`, reusing the cached result in between (and as a
+    fallback if a live fetch fails/returns nothing). Keeps a rate-limited feed in the map
+    without hitting it every hourly run."""
+    os.makedirs(FEED_CACHE_DIR, exist_ok=True)
+    path = os.path.join(FEED_CACHE_DIR, re.sub(r"[^A-Za-z0-9]+", "_", name) + ".json")
+    cache = None
+    if os.path.exists(path):
+        try:
+            cache = json.load(open(path))
+        except Exception:
+            cache = None
+    # Reuse the cache (no network) until `interval_h` has passed since the last *attempt*, so a
+    # feed that keeps failing (e.g. a persistent 429) is still only hit on that slower cadence.
+    if cache and (time.time() - cache.get("ts", 0)) < interval_h * 3600:
+        fresh = [s for s in cache.get("stories", []) if s.get("published", 0) >= since]
+        due_in = interval_h - (time.time() - cache["ts"]) / 3600
+        log(f"  {name}: {len(fresh)} stories (cached; next fetch in {due_in:.1f} h)")
+        return fresh
+    out = fetch_rss(name, url, weight, since, log)
+    stories = out if out else (cache.get("stories", []) if cache else [])
+    try:  # stamp the attempt time (success or not) so the interval backoff holds
+        json.dump({"ts": time.time(), "stories": stories}, open(path, "w"))
+    except Exception as e:
+        log(f"  ! {name}: cache write failed: {str(e)[:60]}")
+    fresh = [s for s in stories if s.get("published", 0) >= since]
+    if not out and cache:  # live fetch failed/empty: fell back to the last good result
+        log(f"  {name}: {len(fresh)} stories (stale cache; live fetch returned nothing)")
+    return fresh
+
+
 def fetch_all(window_days=7, log=print):
     now = time.time()
     since = now - window_days * 86400
@@ -313,7 +355,11 @@ def fetch_all(window_days=7, log=print):
     log("Fetching sources...")
     stories += fetch_hn(since, log)
     for name, url, w in RSS_FEEDS:
-        stories += fetch_rss(name, url, w, since, log)
+        iv = FEED_INTERVAL_HOURS.get(name)
+        if iv:
+            stories += _fetch_rss_throttled(name, url, w, since, iv, log)
+        else:
+            stories += fetch_rss(name, url, w, since, log)
     stories += fetch_hf_papers(since, log)
     stories += fetch_hf_models(since, log, now)
     stories += fetch_github(since, log)

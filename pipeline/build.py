@@ -74,7 +74,10 @@ def breaking_stats(stories, mentions, now):
     """Weighted attention and story counts per entity in the last 6 h and the 6 h before."""
     recent_w, prev_w, recent_n = defaultdict(float), defaultdict(float), defaultdict(int)
     for s in stories:
-        if s["kind"] in ("model", "repo"):  # trending lists are stamped "now": no real timing
+        # Skip items with no real surge timing: trending lists are stamped "now", and
+        # date_imprecise items (month-precision feeds dated to first-seen) would all land in one
+        # window at once when a feed is first added -> a false "breaking" burst (e.g. Ai2).
+        if s["kind"] in ("model", "repo") or s.get("date_imprecise"):
             continue
         age = (now - s["published"]) / 3600
         if age >= 2 * BREAK_WINDOW_H:

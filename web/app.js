@@ -292,10 +292,56 @@
     select(d);
   }
 
-  $("#search").addEventListener("change", (e) => {
-    const q = e.target.value.trim().toLowerCase();
+  // Lazy-loaded flat list of the 30-day article archive, so search can surface news for entities
+  // that aren't big enough to be nodes on the map. Fetched once, on first use.
+  let archive = null;
+  async function getArchive() {
+    if (archive) return archive;
+    archive = [];
+    try {
+      const a = await (await fetch("data/articles.json", { cache: "no-store" })).json();
+      const seen = new Set();
+      for (const [source, items] of Object.entries(a.articles || {})) {
+        for (const it of items) {
+          if (!it.url || seen.has(it.url)) continue;
+          seen.add(it.url);
+          archive.push({
+            title: it.title || "", url: it.url, source,
+            published: new Date((+it.published || 0) * 1000).toISOString(),
+            discussion: it.discussion && it.discussion !== "None" ? it.discussion : null,
+          });
+        }
+      }
+      archive.sort((x, y) => new Date(y.published) - new Date(x.published));
+    } catch (e) { /* archive unavailable: search just falls back to nodes only */ }
+    return archive;
+  }
+
+  function renderSearchPanel(query, hits) {
+    select(null); // clear any node selection/highlight, then show our own panel
+    const top = hits.slice(0, 30);
+    $("#panelBody").innerHTML = `
+      <h2>“${esc(query)}”</h2>
+      <div class="badges"><span>search · not on the map</span></div>
+      ${top.length ? `<p class="meta">${hits.length} article${hits.length === 1 ? "" : "s"} in the last 30 days with “${esc(query)}” in the headline${hits.length > top.length ? ` · showing ${top.length}` : ""}</p>
+      <h3>Headlines</h3>
+      <ul class="stories">${top.map((s) => `
+        <li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>
+        <div class="meta">${esc(s.source)} · ${ago(s.published)}${s.discussion ? ` · <a href="${esc(s.discussion)}" target="_blank" rel="noopener">discussion</a>` : ""}</div></li>`).join("")}</ul>`
+      : `<p class="meta">No headlines in the last 30 days mention “${esc(query)}”. It may not have appeared in the sources yet — the archive covers headlines, so very new or niche entities can be missing.</p>`}`;
+    $("#panel").hidden = false;
+  }
+
+  $("#search").addEventListener("change", async (e) => {
+    const raw = e.target.value.trim();
+    const q = raw.toLowerCase();
+    if (!q) return;
+    // 1) an entity that's on the map -> focus its node (reveal it if a filter is hiding it)
     const d = nodes.find((n) => n.label.toLowerCase() === q) || nodes.find((n) => n.label.toLowerCase().includes(q));
-    if (d) { if (!visible(d)) { activeTypes.add(d.type); $("#status").value = "all"; applyFilters(); } focusNode(d); }
+    if (d) { if (!visible(d)) { activeTypes.add(d.type); $("#status").value = "all"; applyFilters(); } focusNode(d); return; }
+    // 2) not on the map -> surface matching news from the 30-day archive
+    const hits = (await getArchive()).filter((a) => a.title.toLowerCase().includes(q));
+    renderSearchPanel(raw, hits);
   });
 
   $("#aboutBtn").addEventListener("click", () => $("#about").showModal());

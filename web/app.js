@@ -176,13 +176,47 @@
     const t = d3.zoomIdentity.translate(W() / 2, padTop + (H() - padTop - padBottom) / 2).scale(k).translate(-(x0 + x1) / 2, -(y0 + y1) / 2);
     (animate ? svg.transition().duration(500) : svg).call(zoom.transform, t);
   }
+  // Phones/tablets (coarse pointer or narrow screen) keep the fit-all view and skip the hint.
+  const MOBILE = window.matchMedia("(max-width: 760px), (pointer: coarse)").matches;
+  function initialView() {
+    if (MOBILE) return fit(false);
+    const vis = nodes.filter(visible);
+    if (!vis.length || vis[0].x === undefined) return fit(false);
+    // Desktop: open zoomed into the hottest cluster near the centre, so detail is legible and
+    // panning/zooming is discoverable — instead of the fit-all view that sits fully zoomed out.
+    const top = vis.slice().sort((a, b) => b.heat - a.heat).slice(0, Math.min(12, vis.length));
+    const cx = d3.mean(top, (d) => d.x), cy = d3.mean(top, (d) => d.y);
+    const padTop = document.querySelector("#types").getBoundingClientRect().bottom + 24;
+    const padBottom = 95;
+    const t = d3.zoomIdentity.translate(W() / 2, padTop + (H() - padTop - padBottom) / 2).scale(1.1).translate(-cx, -cy);
+    svg.call(zoom.transform, t);
+  }
   // settle the layout before showing it: deterministic, no wobble, and the fit sees final positions
   sim.stop();
   sim.tick(320);
   sim.on("tick").call(sim);
-  fit(false);
+  initialView();
   window.addEventListener("resize", () => fit(false));
   svg.on("click", () => select(null));
+
+  // First-visit navigation hint (desktop only): fades in, auto-dismisses after 15 s, and also
+  // clears on the first pan/zoom or on close. Never blocks map interaction (pointer-events via CSS).
+  if (!MOBILE) {
+    const help = $("#mapHelp");
+    if (help) {
+      help.hidden = false;
+      requestAnimationFrame(() => help.classList.add("show"));
+      let gone = false;
+      const dismiss = () => {
+        if (gone) return; gone = true;
+        help.classList.remove("show");
+        setTimeout(() => { help.hidden = true; }, 450);
+      };
+      const timer = setTimeout(dismiss, 15000);
+      $("#mapHelpClose").addEventListener("click", () => { clearTimeout(timer); dismiss(); });
+      svg.on("wheel.hint mousedown.hint touchstart.hint", () => { clearTimeout(timer); dismiss(); });
+    }
+  }
 
   // ---- filtering
   function visible(d) {

@@ -2,12 +2,16 @@
   --bg:#f6f5f2; --ink:#1d1d1d; --mid:#6f6f6f; --soft:#b9b9b6; --faint:#dcdbd7; --line:#cfcecb;
   --accent:#ff4a1c; --accent-soft:rgba(255,74,28,.07);
   --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  /* frosted-glass chrome: translucent (with blur) where supported, near-opaque fallback otherwise */
+  --glass:rgba(246,245,242,.44); --glass-solid:rgba(246,245,242,.78); --glass-border:rgba(29,29,29,.1);
+  --glass-shadow:0 6px 24px rgba(0,0,0,.08),inset 0 1px 0 rgba(255,255,255,.55);
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:13px/1.5 var(--mono);overflow:hidden}
 a{color:var(--ink)}
-#bar{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;gap:16px;
-  padding:14px 20px;z-index:5;flex-wrap:wrap;pointer-events:none}
+#bar{position:fixed;top:10px;left:12px;right:12px;display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:10px 16px;z-index:5;flex-wrap:wrap;pointer-events:auto;
+  background:var(--glass-solid);border:1px solid var(--glass-border);border-radius:16px;box-shadow:var(--glass-shadow)}
 #bar > *{pointer-events:auto}
 .brand h1{margin:0;font-size:16px;font-weight:700;letter-spacing:.5px;display:inline}
 .tag{color:var(--mid);margin-left:10px;font-size:12px}
@@ -16,7 +20,9 @@ input,select,button{font:inherit;font-size:12px;color:var(--ink);background:#fff
 #search{width:260px}
 button{cursor:pointer}
 button.ghost{background:transparent}
-.chips{position:fixed;top:54px;left:20px;display:flex;flex-wrap:wrap;gap:4px 14px;z-index:5;max-width:70vw}
+.chips{position:fixed;top:74px;left:12px;display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px 14px;z-index:5;
+  max-width:min(70vw,calc(100vw - 24px));padding:8px 14px;
+  background:var(--glass-solid);border:1px solid var(--glass-border);border-radius:14px;box-shadow:var(--glass-shadow)}
 .chip{font-size:12px;color:var(--ink);cursor:pointer;user-select:none;padding:1px 0;border-bottom:1px solid transparent}
 .chip::before{content:"■ ";color:var(--ink)}
 .chip.off{color:var(--soft)}
@@ -71,7 +77,9 @@ button.ghost{background:transparent}
 .conn{display:flex;flex-wrap:wrap;gap:4px 12px}
 .conn span{cursor:pointer;border-bottom:1px solid var(--faint)}
 .conn span:hover{border-color:var(--ink)}
-#legend{position:fixed;left:20px;bottom:14px;display:flex;gap:18px;flex-wrap:wrap;color:var(--mid);font-size:11px;z-index:5}
+#legend{position:fixed;left:12px;bottom:12px;display:inline-flex;gap:18px;flex-wrap:wrap;color:var(--mid);font-size:11px;z-index:5;
+  max-width:calc(100vw - 24px);padding:8px 14px;
+  background:var(--glass-solid);border:1px solid var(--glass-border);border-radius:14px;box-shadow:var(--glass-shadow)}
 #legend .acc{color:var(--accent)}
 dialog{background:#fff;color:var(--ink);border:1px solid var(--ink);border-radius:0;max-width:560px;padding:22px 24px;font:13px/1.55 var(--mono)}
 dialog::backdrop{background:#f6f5f2cc}
@@ -79,12 +87,28 @@ dialog h2{margin-top:0;font-size:16px}
 dialog h3{font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacing:1px}
 .muted{color:var(--mid);font-size:11px}
 #tooltip{position:fixed;pointer-events:none;background:#fff;border:1px solid var(--ink);padding:5px 8px;font-size:11px;z-index:7}
+/* First-visit navigation hint: floats bottom-centre, fades in/out, never blocks the map (desktop only, shown via JS) */
+#mapHelp{position:fixed;left:50%;bottom:48px;transform:translateX(-50%) translateY(8px);z-index:20;
+  max-width:min(92vw,460px);background:#fff;border:1px solid var(--ink);padding:12px 16px;
+  font:12px/1.5 var(--mono);color:var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.10);
+  opacity:0;transition:opacity .4s ease,transform .4s ease;pointer-events:none}
+#mapHelp.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#mapHelp strong{display:block;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--mid);margin:0 24px 7px 0}
+#mapHelp ul{margin:0;padding:0;list-style:none;display:flex;gap:18px;flex-wrap:wrap}
+#mapHelp li{white-space:nowrap}
+#mapHelp b{color:var(--accent);font-weight:600}
+#mapHelp .close{pointer-events:auto}
+/* Where backdrop-filter is supported (all current Chrome/Edge/Safari/Firefox), make the chrome
+   truly translucent and blur the map behind it; otherwise the near-opaque --glass-solid stands in. */
+@supports ((backdrop-filter:blur(2px)) or (-webkit-backdrop-filter:blur(2px))){
+  #bar,.chips,#legend{background:var(--glass);-webkit-backdrop-filter:blur(16px) saturate(1.3);backdrop-filter:blur(16px) saturate(1.3)}
+}
 @media (max-width:760px){
-  #bar{background:var(--bg);padding-bottom:8px}
-  .chips{background:var(--bg);padding:2px 0 6px}
+  /* mobile: revert to the original full-bleed solid bars (no floating glass) to avoid layout breakage */
+  #bar{top:0;left:0;right:0;border:0;border-radius:0;box-shadow:none;background:var(--bg);padding:14px 20px 8px;-webkit-backdrop-filter:none;backdrop-filter:none}
+  .chips{top:96px;left:0;max-width:calc(100vw - 40px);border:0;border-radius:0;box-shadow:none;background:var(--bg);padding:2px 20px 6px;-webkit-backdrop-filter:none;backdrop-filter:none}
   .tag{display:none}
   #search{width:140px}
-  .chips{top:96px;max-width:calc(100vw - 40px)}
   #panel{top:auto;left:10px;right:10px;bottom:10px;width:auto;max-height:62vh}
   #legend{display:none}
 }

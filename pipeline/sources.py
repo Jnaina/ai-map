@@ -15,6 +15,15 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
+# Optional: curl_cffi impersonates a real browser's TLS fingerprint, which gets past TLS/JS
+# bot-challenges (e.g. Vercel's "Security Checkpoint" on VentureBeat and O'Reilly) that a plain
+# urllib request can't. Only used for feeds in IMPERSONATE_FEEDS; if it's not installed those
+# feeds simply fail and are skipped — the rest of the (stdlib-only) pipeline is unaffected.
+try:
+    from curl_cffi import requests as _cffi
+except Exception:
+    _cffi = None
+
 UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) ai-map/0.1 (+personal project)"}
 TIMEOUT = 20
 
@@ -22,7 +31,9 @@ TIMEOUT = 20
 RSS_FEEDS = [
     ("TechCrunch AI", "https://techcrunch.com/category/artificial-intelligence/feed/", 1.0),
     ("The Verge AI", "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml", 1.0),
-    ("VentureBeat AI", "https://venturebeat.com/category/ai/feed/", 1.0),
+    # VentureBeat is on Vercel behind a TLS/JS bot-challenge; use its MAIN feed (the /category/ai one
+    # is stale) via curl_cffi impersonation (see IMPERSONATE_FEEDS) and AI-gate it (all-categories).
+    ("VentureBeat AI", "https://venturebeat.com/feed", 1.0),
     ("MIT Technology Review", "https://www.technologyreview.com/topic/artificial-intelligence/feed", 1.0),
     ("Ars Technica AI", "https://arstechnica.com/ai/feed/", 1.0),
     ("Wired AI", "https://www.wired.com/feed/tag/ai/latest/rss", 1.0),
@@ -112,9 +123,9 @@ RSS_FEEDS = [
     ("Pandaily", "https://pandaily.com/feed/", 0.7),  # Beijing tech news
     ("Import AI", "https://importai.substack.com/feed", 1.0),  # Jack Clark (Anthropic co-founder): weekly AI research + policy
     ("Data Center Knowledge", "https://www.datacenterknowledge.com/rss.xml", 0.8),  # authoritative DC trade press; AI-gated (hyperscale/GPU/power-for-AI)
-    # O'Reilly Radar blocks our fetcher at the edge (Akamai 403), so pull it through the public
-    # morss.it proxy. Best-effort: if morss is down/slow the source just skips that hour.
-    ("O'Reilly Radar", "https://morss.it/:proxy:format=rss/https://www.oreilly.com/radar/topics/ai-ml/feed/", 1.0),
+    # O'Reilly Radar sits behind a TLS/JS bot-challenge; fetched directly via curl_cffi impersonation
+    # (see IMPERSONATE_FEEDS) — fresher and more reliable than the old morss.it proxy.
+    ("O'Reilly Radar", "https://www.oreilly.com/radar/topics/ai-ml/feed/", 1.0),
 ]
 
 # Feeds that are NOT AI-only (general tech/research/news). Stories from these are kept only
@@ -125,7 +136,7 @@ AI_FILTER_SOURCES = {
     "The Information", "Semafor", "Platformer", "SemiAnalysis",
     "Quanta Magazine", "404 Media", "Databricks", "CSET",
     "ChinaTalk", "Interconnected", "SCMP Tech", "TechNode", "Pandaily",
-    "Data Center Knowledge",
+    "Data Center Knowledge", "VentureBeat AI",
 }
 
 # Per-feed caps: keep only the N most recent items from a firehose source so it can't
@@ -136,18 +147,25 @@ FEED_CAPS = {
     "TechNode": 40,  # ~2000-item firehose of general China tech; cap after the AI-relevance gate
 }
 
+# Feeds behind a TLS/JS bot-challenge (e.g. Vercel's "Security Checkpoint") that a plain urllib
+# request can't pass; fetched via curl_cffi browser impersonation instead. Needs curl_cffi
+# installed (optional); without it these feeds are simply skipped.
+IMPERSONATE_FEEDS = {"VentureBeat AI", "O'Reilly Radar"}
+
 # Feeds to fetch at most once every N hours (the pipeline runs hourly). Between live fetches the
-# last good result is reused, so the feed stays in the map without being hit every run. Use this
-# for sources that rate-limit us (e.g. VentureBeat returns HTTP 429 on an hourly cadence).
-FEED_INTERVAL_HOURS = {
-    "VentureBeat AI": 2,
-}
+# last good result is reused (and served as a fallback on failure), so the feed stays in the map
+# without being hit every run. Use this for sources that rate-limit us on an hourly cadence.
+FEED_INTERVAL_HOURS = {}
 FEED_CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "feed-cache")
 
 GITHUB_TOPICS = ["llm", "ai-agents", "agents", "generative-ai", "mcp", "large-language-models", "rag", "ai"]
 
 
-def _get(url, headers=None):
+def _get(url, headers=None, impersonate=False):
+    if impersonate and _cffi is not None:
+        r = _cffi.get(url, impersonate="chrome", timeout=TIMEOUT, headers=headers or None)
+        r.raise_for_status()  # a challenge/error (e.g. 429/403) raises -> caller logs & skips
+        return r.content
     req = urllib.request.Request(url, headers={**UA, **(headers or {})})
     with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
         data = r.read()
@@ -181,7 +199,7 @@ def fetch_rss(name, url, weight, since, log):
     out = []
     now_ts = time.time()
     try:
-        root = ET.fromstring(_get(url))
+        root = ET.fromstring(_get(url, impersonate=name in IMPERSONATE_FEEDS))
     except Exception as e:
         log(f"  ! {name}: {str(e)[:80]}")
         return out

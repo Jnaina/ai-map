@@ -34,7 +34,101 @@ RSS_FEEDS = [
     ("NVIDIA Blog", "https://blogs.nvidia.com/feed/", 1.1),
     ("Hugging Face Blog", "https://huggingface.co/blog/feed.xml", 1.1),
     ("AWS Machine Learning", "https://aws.amazon.com/blogs/machine-learning/feed/", 0.9),
+    # AI labs, frameworks and researchers (AI-only feeds, trusted as-is / not gated).
+    ("Anthropic", "https://rsshub.bestblogs.dev/anthropic/news", 1.2),  # unofficial RSSHub mirror
+    ("Anthropic Engineering", "https://rsshub.bestblogs.dev/anthropic/engineering", 1.2),  # RSSHub mirror (live; conoro GH-Pages feed is stale since Dec 2025)
+    ("Microsoft AI Blog", "https://www.microsoft.com/en-us/ai/blog/feed/", 1.0),
+    ("Apple Machine Learning", "https://machinelearning.apple.com/rss.xml", 1.0),
+    ("PyTorch", "https://pytorch.org/blog/feed.xml", 1.0),
+    ("LangChain", "https://blog.langchain.com/rss.xml", 0.9),
+    ("Together AI", "https://www.together.ai/blog/rss.xml", 0.8),
+    ("Last Week in AI", "https://lastweekin.ai/feed/", 0.9),
+    ("Berkeley AI Research", "https://bair.berkeley.edu/blog/feed.xml", 0.9),
+    ("Lilian Weng", "https://lilianweng.github.io/posts/index.xml", 0.9),
+    ("arXiv cs.AI", "https://export.arxiv.org/rss/cs.AI", 0.4),  # AI-only category; export.* host (rss.* returns empty); firehose -> low weight
+    # Broader tech/research sources: not AI-only feeds, so they are AI-relevance gated below.
+    ("Google Research", "https://research.google/blog/rss/", 1.1),
+    ("Microsoft Research", "https://www.microsoft.com/en-us/research/feed/", 1.0),
+    ("Meta Engineering", "https://engineering.fb.com/feed/", 1.0),
+    ("The Information", "https://www.theinformation.com/feed", 1.0),
+    ("Semafor", "https://www.semafor.com/rss.xml", 0.9),
+    ("Platformer", "https://www.platformer.news/rss/", 0.9),
+    ("SemiAnalysis", "https://semianalysis.com/feed/", 1.0),  # public RSS = free posts only (mostly paywalled); low volume
+    # AI-scoped feeds from a curated public list (danbarbarito gist), validated live 2026-10-20.
+    # These are AI-topic feeds (or AI-only blogs), so trusted as-is like the other AI-category feeds.
+    ("The Register AI", "https://www.theregister.com/software/ai_ml/headlines.atom", 1.0),
+    ("IEEE Spectrum AI", "https://spectrum.ieee.org/feeds/topic/artificial-intelligence.rss", 1.0),
+    ("The Guardian AI", "https://www.theguardian.com/technology/artificialintelligenceai/rss", 1.0),
+    ("ZDNET AI", "https://www.zdnet.com/topic/artificial-intelligence/rss.xml", 0.9),
+    ("TechXplore AI", "https://techxplore.com/rss-feed/machine-learning-ai-news/", 0.9),
+    ("SiliconANGLE AI", "https://siliconangle.com/category/ai/feed", 0.8),
+    ("InfoQ AI/ML", "https://feed.infoq.com/ai-ml-data-eng/", 0.9),
+    ("KDnuggets", "https://www.kdnuggets.com/feed", 0.8),
+    ("MarkTechPost", "https://www.marktechpost.com/feed", 0.6),  # high-volume AI-news site -> capped + low weight
+    ("MIT News ML", "https://news.mit.edu/topic/mitmachine-learning-rss.xml", 1.0),
+    ("Nature ML", "https://www.nature.com/subjects/machine-learning.rss", 0.9),
+    ("NVIDIA Technical Blog", "https://developer.nvidia.com/blog/feed", 1.0),
+    ("Latent Space", "https://www.latent.space/feed", 1.0),
+    ("Interconnects", "https://www.interconnects.ai/feed", 1.0),
+    ("Ahead of AI", "https://magazine.sebastianraschka.com/feed", 1.0),
+    ("AI Snake Oil", "https://aisnakeoil.substack.com/feed", 0.9),
+    ("The Algorithmic Bridge", "https://thealgorithmicbridge.substack.com/feed", 0.8),
+    ("TheSequence", "https://thesequence.substack.com/feed", 0.8),
+    ("One Useful Thing", "https://www.oneusefulthing.org/feed", 0.9),
+    # Reputable but NOT AI-only (general science/tech/vendor) -> AI-relevance gated below.
+    ("Quanta Magazine", "https://api.quantamagazine.org/feed", 0.9),
+    ("404 Media", "https://www.404media.co/rss", 0.9),
+    ("Databricks", "https://www.databricks.com/feed", 0.7),
+    # AI labs with no native RSS, via the Alan Turing Institute's scraped-feed repo
+    # (alan-turing-institute/ai-rss-feeds). Validated live 2026-10-20; links are absolute.
+    # Fills real gaps (we had no Mistral/xAI/Cohere/Ai2/Mila feed). Trusted as-is (lab feeds).
+    ("Mistral News", "https://raw.githubusercontent.com/alan-turing-institute/ai-rss-feeds/refs/heads/main/feeds/mistral-news.xml", 1.2),
+    ("xAI", "https://raw.githubusercontent.com/alan-turing-institute/ai-rss-feeds/refs/heads/main/feeds/spacex-ai-news.xml", 1.2),  # repo mislabels x.ai as "SpaceX"
+    ("Cohere Blog", "https://raw.githubusercontent.com/alan-turing-institute/ai-rss-feeds/refs/heads/main/feeds/cohere-blog.xml", 1.0),
+    ("Ai2 (Allen Institute)", "https://raw.githubusercontent.com/alan-turing-institute/ai-rss-feeds/refs/heads/main/feeds/allenai-news.xml", 1.0),
+    ("Mila", "https://raw.githubusercontent.com/alan-turing-institute/ai-rss-feeds/refs/heads/main/feeds/mila-news.xml", 0.9),
+    ("AISI Blog", "https://raw.githubusercontent.com/alan-turing-institute/ai-rss-feeds/refs/heads/main/feeds/aisi-blog.xml", 0.9),
+    # Curated from Feedspot's "Top 100 AI RSS Feeds", validated live 2026-10-20. Mostly fills an
+    # AI policy / safety / governance gap, plus a few reputable AI-scoped news feeds. Trusted as-is
+    # (AI-only orgs or AI-topic-scoped URLs) except CSET, which is gated below.
+    ("MIRI", "https://intelligence.org/feed/", 0.7),  # AI alignment research (Machine Intelligence Research Institute)
+    ("Redwood Research", "https://blog.redwoodresearch.org/feed", 0.8),  # AI alignment lab
+    ("Transformer News", "https://www.transformernews.ai/feed", 0.9),  # AI news + policy
+    ("AIhub", "https://aihub.org/feed/?cat=-473", 0.9),  # non-profit AI research community
+    ("The Conversation AI", "https://theconversation.com/topics/artificial-intelligence-ai-90/articles.atom", 0.8),
+    ("Crunchbase News AI", "https://news.crunchbase.com/sections/ai/feed/", 0.8),  # AI startup/funding
+    ("GeekWire AI", "https://www.geekwire.com/tag/ai/feed/", 0.8),
+    ("Fast Company AI", "https://www.fastcompany.com/section/artificial-intelligence/rss", 0.8),
+    ("NYT AI", "https://www.nytimes.com/svc/collections/v1/publish/https://www.nytimes.com/spotlight/artificial-intelligence/rss.xml", 0.9),
+    ("CSET", "https://cset.georgetown.edu/feed/", 0.8),  # Georgetown AI/emerging-tech policy; org-wide feed -> AI-gated
+    # China AI — a real coverage gap. Dedicated China-AI analysis is trusted as-is; broader
+    # China tech/policy outlets are AI-relevance gated below. Validated live 2026-10-20.
+    ("ChinAI", "https://chinai.substack.com/feed", 1.0),  # Jeff Ding: weekly translations/analysis of China's AI
+    ("Recode China AI", "https://recodechinaai.substack.com/feed", 0.9),  # dedicated China-AI newsletter
+    ("ChinaTalk", "https://www.chinatalk.media/feed", 0.9),  # US-China tech/policy
+    ("Interconnected", "https://interconnected.blog/rss/", 0.8),  # Kevin Xu: bilingual US-China tech
+    ("SCMP Tech", "https://www.scmp.com/rss/36/feed", 0.9),  # South China Morning Post tech section (AI-topic feed is 404)
+    ("TechNode", "https://technode.com/feed/", 0.7),  # China startup/tech news (high volume -> capped)
+    ("Pandaily", "https://pandaily.com/feed/", 0.7),  # Beijing tech news
 ]
+
+# Feeds that are NOT AI-only (general tech/research/news). Stories from these are kept only
+# if they look AI-relevant (AI keyword or an AI-specific entity), the same gate used for
+# Hacker News. The AI-category feeds above are trusted as-is and never filtered.
+AI_FILTER_SOURCES = {
+    "Google Research", "Microsoft Research", "Meta Engineering",
+    "The Information", "Semafor", "Platformer", "SemiAnalysis",
+    "Quanta Magazine", "404 Media", "Databricks", "CSET",
+    "ChinaTalk", "Interconnected", "SCMP Tech", "TechNode", "Pandaily",
+}
+
+# Per-feed caps: keep only the N most recent items from a firehose source so it can't
+# flood the map/archive. arXiv cs.AI announces ~300 papers/day.
+FEED_CAPS = {
+    "arXiv cs.AI": 50,
+    "MarkTechPost": 20,  # publishes many AI posts/day; cap so it can't flood the window
+    "TechNode": 40,  # ~2000-item firehose of general China tech; cap after the AI-relevance gate
+}
 
 GITHUB_TOPICS = ["llm", "ai-agents", "agents", "generative-ai", "mcp", "large-language-models", "rag", "ai"]
 
@@ -97,9 +191,14 @@ def fetch_rss(name, url, weight, since, log):
             summary = it.findtext("description") or ""
         if not title or not date or date < since:
             continue
+        date = min(date, time.time())  # a future pubDate (scraper quirk) must not amplify heat
         out.append(dict(id=link or title, title=_clean(title), url=link, source=name, kind="news",
                         published=date, engagement=0, weight=weight,
                         text=_clean(title) + ". " + _clean(summary)[:400]))
+    cap = FEED_CAPS.get(name)
+    if cap and len(out) > cap:
+        out.sort(key=lambda s: s["published"], reverse=True)  # keep the most recent
+        out = out[:cap]
     log(f"  {name}: {len(out)} stories")
     return out
 

@@ -87,6 +87,11 @@ RSS_FEEDS = [
     ("The Algorithmic Bridge", "https://thealgorithmicbridge.substack.com/feed", 0.8),
     ("TheSequence", "https://thesequence.substack.com/feed", 0.8),
     ("One Useful Thing", "https://www.oneusefulthing.org/feed", 0.9),
+    # Second pass over the danbarbarito gist, validated live 2026-10-21 (fresh + parses).
+    ("DeepMind Blog", "https://deepmind.com/blog/feed/basic/", 1.2),  # old URL still redirects to live deepmind.google/blog; major lab, AI-only
+    ("AI Business", "https://aibusiness.com/rss.xml", 0.8),  # AI enterprise/trade news; AI-only site
+    ("AI Now Institute", "https://ainowinstitute.org/category/news/feed", 0.8),  # AI policy/ethics/governance
+    ("Max Woolf", "https://minimaxir.com/post/index.xml", 0.9),  # quality individual ML blog, low volume
     # Reputable but NOT AI-only (general science/tech/vendor) -> AI-relevance gated below.
     ("Quanta Magazine", "https://api.quantamagazine.org/feed", 0.9),
     ("404 Media", "https://www.404media.co/rss", 0.9),

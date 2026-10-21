@@ -123,9 +123,11 @@ RSS_FEEDS = [
     ("Pandaily", "https://pandaily.com/feed/", 0.7),  # Beijing tech news
     ("Import AI", "https://importai.substack.com/feed", 1.0),  # Jack Clark (Anthropic co-founder): weekly AI research + policy
     ("Data Center Knowledge", "https://www.datacenterknowledge.com/rss.xml", 0.8),  # authoritative DC trade press; AI-gated (hyperscale/GPU/power-for-AI)
-    # O'Reilly Radar sits behind a TLS/JS bot-challenge; fetched directly via curl_cffi impersonation
-    # (see IMPERSONATE_FEEDS) — fresher and more reliable than the old morss.it proxy.
-    ("O'Reilly Radar", "https://www.oreilly.com/radar/topics/ai-ml/feed/", 1.0),
+    # O'Reilly Radar: oreilly.com put the radar feeds behind Akamai bot management (403s even via
+    # curl_cffi impersonation) on 2026-10-21. The FeedBurner mirror serves the same content, is
+    # fresh, and loads on a plain request (no challenge). This is the full radar feed (not ai-ml
+    # only), so it's AI-gated below.
+    ("O'Reilly Radar", "https://feeds.feedburner.com/oreilly/radar/atom", 1.0),
 ]
 
 # Feeds that are NOT AI-only (general tech/research/news). Stories from these are kept only
@@ -136,7 +138,7 @@ AI_FILTER_SOURCES = {
     "The Information", "Semafor", "Platformer", "SemiAnalysis",
     "Quanta Magazine", "404 Media", "Databricks", "CSET",
     "ChinaTalk", "Interconnected", "SCMP Tech", "TechNode", "Pandaily",
-    "Data Center Knowledge", "VentureBeat AI",
+    "Data Center Knowledge", "VentureBeat AI", "O'Reilly Radar",
 }
 
 # Per-feed caps: keep only the N most recent items from a firehose source so it can't
@@ -150,7 +152,7 @@ FEED_CAPS = {
 # Feeds behind a TLS/JS bot-challenge (e.g. Vercel's "Security Checkpoint") that a plain urllib
 # request can't pass; fetched via curl_cffi browser impersonation instead. Needs curl_cffi
 # installed (optional); without it these feeds are simply skipped.
-IMPERSONATE_FEEDS = {"VentureBeat AI", "O'Reilly Radar"}
+IMPERSONATE_FEEDS = {"VentureBeat AI"}
 
 # Feeds to fetch at most once every N hours (the pipeline runs hourly). Between live fetches the
 # last good result is reused (and served as a fallback on failure), so the feed stays in the map

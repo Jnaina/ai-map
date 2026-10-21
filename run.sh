@@ -24,10 +24,9 @@ python3 pipeline/build.py "$@" 2>&1 | tee "$LOGFILE"
 # into data/feed_health.json, and print any feeds needing attention. Best-effort.
 python3 pipeline/feed_health.py 2>&1 | tee -a "$LOGFILE" || true
 
-# Feed-failure notifications: ntfy push ONLY when a source newly breaks (down/missing);
-# sends nothing otherwise. Reads the health report above; de-dupes via
-# data/feed_alert_state.json so a feed isn't re-alerted hourly while it stays down.
-# Best-effort. Disable with AIMAP_ALERTS=off.
+# Feed-failure notifications: ntfy push whenever a source is down/missing, re-sent each run
+# as an hourly reminder while it stays broken; sends nothing when all feeds are healthy.
+# Reads the health report above. Best-effort. Disable with AIMAP_ALERTS=off.
 python3 pipeline/feed_alert.py 2>&1 | tee -a "$LOGFILE" || true
 
 # Log rotation: keep ~14 days of per-run build/deploy logs.

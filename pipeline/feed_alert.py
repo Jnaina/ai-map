@@ -10,13 +10,13 @@ What counts as "broken": status "down" (>=3 consecutive fetch failures, i.e. fai
 "silent" (a low-frequency blog that just hasn't posted) or "failing" (a single transient
 blip such as a one-off timeout) -- those would be noise.
 
-State is kept in data/feed_alert_state.json so a feed is only alerted ONCE when it breaks,
-not re-sent every hour while it stays down. When a feed recovers the state is updated
-silently (so it can alert again if it breaks later) but no notification is sent.
+It re-sends the alert every run while a feed stays down (an hourly reminder), so an
+outage keeps nagging until it's fixed. data/feed_alert_state.json records which feeds were
+already down so newly-broken ones are marked "(new)" in the message; when all feeds are
+healthy it sends nothing.
 
-    python3 pipeline/feed_alert.py              # normal: alert on changes, update state
+    python3 pipeline/feed_alert.py              # normal: alert if anything is down
     python3 pipeline/feed_alert.py --dry-run    # print what it would send; don't send/persist
-    python3 pipeline/feed_alert.py --force       # (re)send the current broken set regardless of state
     python3 pipeline/feed_alert.py --test        # send a test notification and exit
 
 Config (env):
@@ -90,7 +90,6 @@ def describe(feed, p):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true", help="print what would be sent; don't send or persist")
-    ap.add_argument("--force", action="store_true", help="send the current broken set even if unchanged")
     ap.add_argument("--test", action="store_true", help="send a test notification and exit")
     ap.add_argument("--health", default=HEALTH, help="path to feed_health.json")
     ap.add_argument("--state", default=STATE, help="path to the alert state file")
@@ -111,13 +110,9 @@ def main():
     current = broken_from(report)
     state = load_json(a.state, {})
     prev = set(state.get("alerted", []))
-
     newly_broken = sorted(set(current) - prev)
-    still_broken = sorted(set(current) & prev)
-    recovered = sorted(prev - set(current))
 
     def persist():
-        """Record the current broken set so we alert each break only once."""
         if a.dry_run:
             return
         st = dict(alerted=sorted(current),
@@ -125,25 +120,17 @@ def main():
         os.makedirs(os.path.dirname(a.state), exist_ok=True)
         json.dump(st, open(a.state, "w"), indent=2)
 
-    # Nothing newly broken -> send nothing. Still sync state so recoveries drop out of the
-    # tracked set (a feed that breaks again later will then alert afresh).
-    if not newly_broken and not a.force:
-        if current:
-            print(f"[feed-alert] no new failures ({len(current)} feed(s) still down, already alerted)")
-        else:
-            print("[feed-alert] all feeds healthy; nothing to send")
-        if recovered:
+    # Nothing broken -> send nothing (no "healthy"/"recovered" messages). Sync state so a
+    # feed that breaks again later is flagged "new" rather than carried over.
+    if not current:
+        print("[feed-alert] all feeds healthy; nothing to send")
+        if prev:
             persist()
-            print(f"[feed-alert] cleared recovered from state: {', '.join(recovered)}")
         return
 
-    # One or more feeds newly broke (or --force): send a single failure alert listing the
-    # feeds that are down right now, newly-broken first.
-    lines = [describe(f, current[f]) for f in newly_broken]
-    lines += [describe(f, current[f]) for f in still_broken if f not in newly_broken]
-    if not lines:  # --force with nothing broken: nothing to send
-        print("[feed-alert] --force: no feeds currently broken; nothing to send")
-        return
+    # Something is broken -> notify. We re-send every run while a feed stays down (an hourly
+    # reminder), not just on the first break. New breakages this run are marked "(new)".
+    lines = [describe(f, current[f]) + (" (new)" if f in newly_broken else "") for f in sorted(current)]
     title = f"AI Map: {len(current)} news feed(s) down"
     body = "\n".join(lines)
     if a.dry_run:
@@ -152,8 +139,9 @@ def main():
         return
     sent = ntfy(title, body, priority="high", tags="warning")
     persist()
-    print(f"[feed-alert] alerted: {', '.join(newly_broken) or '(forced resend)'}"
-          + ("" if sent else " [note: ntfy send failed; state still updated]"))
+    tag = f" (new: {', '.join(newly_broken)})" if newly_broken else " (ongoing)"
+    print(f"[feed-alert] alerted: {len(current)} down{tag}"
+          + ("" if sent else " [note: ntfy send failed]"))
 
 
 if __name__ == "__main__":

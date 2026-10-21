@@ -98,6 +98,14 @@ RSS_FEEDS = [
     ("JMIR AI", "https://ai.jmir.org/feed", 1.0),  # peer-reviewed AI-in-medicine journal; AI-only
     ("Endpoints News", "https://endpoints.news/feed/", 0.9),  # biopharma/drug-R&D news (needs curl_cffi) -> AI-gated
     ("STAT Health Tech", "https://www.statnews.com/category/health-tech/feed", 0.9),  # authoritative health/biotech journalism -> AI-gated
+    # AI in banking/insurance/fintech -- a top enterprise-AI spend vertical. Validated live
+    # 2026-10-21. All general fintech/insurance outlets -> AI-gated (only AI stories pass).
+    ("Finextra", "https://www.finextra.com/rss/headlines.aspx", 0.9),  # authoritative fintech news, high volume
+    ("Bank Automation News", "https://bankautomationnews.com/feed/", 0.8),  # AI/automation in banking (needs curl_cffi)
+    ("Tearsheet", "https://tearsheet.co/feed/", 0.7),  # fintech/banking
+    ("Finovate", "https://finovate.com/feed/", 0.7),  # fintech
+    ("Coverager", "https://coverager.com/feed/", 0.7),  # insurtech/insurance news
+    ("Insurance Innovation Reporter", "https://iireporter.com/feed/", 0.7),  # insurance technology
     # Reputable but NOT AI-only (general science/tech/vendor) -> AI-relevance gated below.
     ("Quanta Magazine", "https://api.quantamagazine.org/feed", 0.9),
     ("404 Media", "https://www.404media.co/rss", 0.9),
@@ -152,6 +160,8 @@ AI_FILTER_SOURCES = {
     "ChinaTalk", "Interconnected", "SCMP Tech", "TechNode", "Pandaily",
     "Data Center Knowledge", "VentureBeat AI", "O'Reilly Radar",
     "Lancet Digital Health", "Endpoints News", "STAT Health Tech",
+    "Finextra", "Bank Automation News", "Tearsheet", "Finovate",
+    "Coverager", "Insurance Innovation Reporter",
 }
 
 # Per-feed caps: keep only the N most recent items from a firehose source so it can't
@@ -165,7 +175,7 @@ FEED_CAPS = {
 # Feeds behind a TLS/JS bot-challenge (e.g. Vercel's "Security Checkpoint") that a plain urllib
 # request can't pass; fetched via curl_cffi browser impersonation instead. Needs curl_cffi
 # installed (optional); without it these feeds are simply skipped.
-IMPERSONATE_FEEDS = {"VentureBeat AI", "Endpoints News"}
+IMPERSONATE_FEEDS = {"VentureBeat AI", "Endpoints News", "Bank Automation News"}
 
 # Feeds to fetch at most once every N hours (the pipeline runs hourly). Between live fetches the
 # last good result is reused (and served as a fallback on failure), so the feed stays in the map

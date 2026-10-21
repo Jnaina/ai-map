@@ -46,7 +46,8 @@ RSS_FEEDS = [
     ("Hugging Face Blog", "https://huggingface.co/blog/feed.xml", 1.1),
     ("AWS Machine Learning", "https://aws.amazon.com/blogs/machine-learning/feed/", 0.9),
     # AI labs, frameworks and researchers (AI-only feeds, trusted as-is / not gated).
-    ("Anthropic", "https://rsshub.bestblogs.dev/anthropic/news", 1.2),  # unofficial RSSHub mirror
+    ("Anthropic", "https://rss.libertas.systems/feeds/anthropic-news.xml", 1.2),  # libertas mirror (plain request; migrated off the bestblogs RSSHub mirror whose /engineering route broke upstream)
+    ("Anthropic Research", "https://rss.libertas.systems/feeds/anthropic-research.xml", 1.2),  # anthropic.com/research/ (libertas mirror; plain request)
     ("Anthropic Engineering", "https://rss.libertas.systems/feeds/anthropic-engineering.xml", 1.2),  # the RSSHub /anthropic/engineering route broke upstream (503 across instances) ~2026-10-19; this mirror is fresh (loads on plain request) and the conoro GH-Pages feed is stale since late 2025
     ("Microsoft AI Blog", "https://www.microsoft.com/en-us/ai/blog/feed/", 1.0),
     ("Apple Machine Learning", "https://machinelearning.apple.com/rss.xml", 1.0),

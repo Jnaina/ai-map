@@ -49,6 +49,8 @@ RSS_FEEDS = [
     ("Anthropic", "https://rss.libertas.systems/feeds/anthropic-news.xml", 1.2),  # libertas mirror (plain request; migrated off the bestblogs RSSHub mirror whose /engineering route broke upstream)
     ("Anthropic Research", "https://rss.libertas.systems/feeds/anthropic-research.xml", 1.2),  # anthropic.com/research/ (libertas mirror; plain request)
     ("Anthropic Engineering", "https://rss.libertas.systems/feeds/anthropic-engineering.xml", 1.2),  # the RSSHub /anthropic/engineering route broke upstream (503 across instances) ~2026-10-19; this mirror is fresh (loads on plain request) and the conoro GH-Pages feed is stale since late 2025
+    ("Anthropic Red Teaming", "https://raw.githubusercontent.com/0xSMW/rss-feeds/main/feeds/feed_anthropic_red.xml", 1.1),  # Anthropic frontier-safety/red-team + cyber-capability posts; no official RSS, so a generated feed from the 0xSMW/rss-feeds GH repo (personal mirror -> fragile; feed-health will flag if it goes stale). Pipeline dedups by URL so overlap with the news/research feeds is harmless
+    ("Thinking Machines", "https://thinkingmachines.ai/index.xml", 1.1),  # Thinking Machines Lab (Mira Murati) official feed; low-frequency (often 0 in the 7-day window until they post)
     ("Microsoft AI Blog", "https://www.microsoft.com/en-us/ai/blog/feed/", 1.0),
     ("Apple Machine Learning", "https://machinelearning.apple.com/rss.xml", 1.0),
     ("PyTorch", "https://pytorch.org/blog/feed.xml", 1.0),

@@ -53,6 +53,8 @@ SOURCE_DOMAINS = {
     "Platformer": "platformer.news",
     "Anthropic": "anthropic.com",
     "Anthropic Engineering": "anthropic.com",
+    "Anthropic Red Teaming": "anthropic.com",
+    "Thinking Machines": "thinkingmachines.ai",
     "Microsoft AI Blog": "microsoft.com",
     "Apple Machine Learning": "machinelearning.apple.com",
     "PyTorch": "pytorch.org",

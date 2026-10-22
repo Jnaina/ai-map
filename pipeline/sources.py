@@ -153,6 +153,17 @@ RSS_FEEDS = [
     # Slashdot has no AI-only feed; the IT section (RSS 1.0/RDF) has the best AI density, so take it
     # AI-gated. Expect heavy overlap with HN + the tech feeds (pipeline dedups by URL).
     ("Slashdot IT", "https://rss.slashdot.org/Slashdot/slashdotIt", 0.7),
+    # Local-LLM inference/offloading projects — GitHub releases.atom. Trusted (AI-only), not gated.
+    # fetch_rss prefixes the project name to each item (see GITHUB_RELEASE_FEEDS above).
+    ("vLLM (releases)", "https://github.com/vllm-project/vllm/releases.atom", 0.7),
+    ("KTransformers (releases)", "https://github.com/kvcache-ai/ktransformers/releases.atom", 0.8),
+    ("AirLLM (releases)", "https://github.com/lyogavin/airllm/releases.atom", 0.8),
+    ("MLC-LLM (releases)", "https://github.com/mlc-ai/mlc-llm/releases.atom", 0.7),
+    ("llamafile (releases)", "https://github.com/Mozilla-Ocho/llamafile/releases.atom", 0.7),
+    ("LMDeploy (releases)", "https://github.com/InternLM/lmdeploy/releases.atom", 0.7),
+    ("TensorRT-LLM (releases)", "https://github.com/NVIDIA/TensorRT-LLM/releases.atom", 0.7),
+    ("Strata (releases)", "https://github.com/niko1221/strata/releases.atom", 0.8),
+    ("Project Maya (releases)", "https://github.com/mw00/project-maya/releases.atom", 0.8),
 ]
 
 # Feeds that are NOT AI-only (general tech/research/news). Stories from these are kept only
@@ -197,7 +208,25 @@ FEED_INTERVAL_HOURS = {
 }
 FEED_CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "feed-cache")
 
-GITHUB_TOPICS = ["llm", "ai-agents", "agents", "generative-ai", "mcp", "large-language-models", "rag", "ai"]
+# GitHub releases.atom feeds for key local-LLM inference/offloading projects. Release items have bare
+# version titles ("v0.32.1"), so fetch_rss prefixes the project name (the value here) to each item —
+# otherwise the story carries no recognisable entity. The project name matches an alias in the entity
+# dictionary (entities.py SEED), so these releases add heat to the project's node + the offloading concept.
+GITHUB_RELEASE_FEEDS = {
+    "vLLM (releases)": "vLLM",
+    "KTransformers (releases)": "KTransformers",
+    "AirLLM (releases)": "AirLLM",
+    "MLC-LLM (releases)": "MLC-LLM",
+    "llamafile (releases)": "llamafile",
+    "LMDeploy (releases)": "LMDeploy",
+    "TensorRT-LLM (releases)": "TensorRT-LLM",
+    "Strata (releases)": "Strata",
+    "Project Maya (releases)": "Project Maya",
+}
+
+GITHUB_TOPICS = ["llm", "ai-agents", "agents", "generative-ai", "mcp", "large-language-models", "rag", "ai",
+                 # inference-optimisation / local-LLM discovery: surface the next ktransformers/PowerInfer
+                 "llm-inference", "inference", "llm-serving", "quantization", "local-llm", "on-device-ai", "gguf"]
 
 
 def _get(url, headers=None, impersonate=False):
@@ -281,9 +310,19 @@ def fetch_rss(name, url, weight, since, log):
         # build can substitute the real first-seen time from the archive DB.
         imprecise = date > now_ts
         date = min(date, now_ts)
-        out.append(dict(id=link or title, title=_clean(title), url=link, source=name, kind="news",
+        disp = _clean(title)
+        proj = GITHUB_RELEASE_FEEDS.get(name)
+        if proj:
+            # Release items are bare version tags ("v0.32.1"); prefix the project so the story is
+            # attributable (heat + entity extraction read the text, not the source name).
+            if proj.lower() not in disp.lower():
+                disp = f"{proj} {disp}".strip()
+            text = f"{proj} release. {disp}. {_clean(summary)[:400]}"
+        else:
+            text = disp + ". " + _clean(summary)[:400]
+        out.append(dict(id=link or title, title=disp, url=link, source=name, kind="news",
                         published=date, engagement=0, weight=weight, date_imprecise=imprecise,
-                        text=_clean(title) + ". " + _clean(summary)[:400]))
+                        text=text))
     cap = FEED_CAPS.get(name)
     if cap and len(out) > cap:
         out.sort(key=lambda s: s["published"], reverse=True)  # keep the most recent

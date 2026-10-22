@@ -127,6 +127,21 @@ SEED = [
     ("ComfyUI", "Open source", ["ComfyUI"], None),
     ("MLX", "Open source", ["MLX"], "Apple"),
     ("Unsloth", "Open source", ["Unsloth"], None),
+    # --- local LLM inference / offloading engines: run large models on consumer GPUs by offloading
+    #     to RAM / NVMe / CPU (matching is case-sensitive for non-Concept types, so list real casings)
+    ("ktransformers", "Open source", ["KTransformers", "ktransformers"], None),
+    ("PowerInfer", "Open source", ["PowerInfer"], None),
+    ("AirLLM", "Open source", ["AirLLM"], None),
+    ("FlexGen", "Open source", ["FlexGen", "FlexLLMGen"], None),
+    ("ExLlamaV2", "Open source", ["ExLlamaV2", "ExLlama", "exllamav2", "exllama"], None),
+    ("MLC-LLM", "Open source", ["MLC-LLM", "MLC LLM"], None),
+    ("DeepSpeed", "Open source", ["DeepSpeed", "ZeRO-Inference"], "Microsoft"),
+    ("llamafile", "Open source", ["llamafile"], None),
+    ("Text Generation Inference", "Open source", ["text-generation-inference", "Text Generation Inference"], "Hugging Face"),
+    ("LMDeploy", "Open source", ["LMDeploy", "lmdeploy"], None),
+    ("TensorRT-LLM", "Open source", ["TensorRT-LLM", "TensorRT LLM"], "NVIDIA"),
+    ("Strata", "Open source", ["Strata"], None),
+    ("Project Maya", "Open source", ["Project Maya", "project-maya"], None),
     # --- hardware
     ("Blackwell GPUs", "Hardware", ["Blackwell", "B200", "B300", "GB200", "GB300"], "NVIDIA"),
     ("Rubin GPUs", "Hardware", ["Rubin", "Vera Rubin"], "NVIDIA"),
@@ -175,6 +190,7 @@ SEED = [
     ("Fine-tuning", "Concept", ["fine[- ]tun(?:e|ing)", "LoRA", "RLHF", "reinforcement learning"], None),
     ("Benchmarks", "Concept", ["benchmarks?", "leaderboard", "SWE-bench", "ARC-AGI"], None),
     ("On-device AI", "Concept", ["on-device", "local LLMs?", "local models?", "edge AI"], None),
+    ("Local LLM inference/offloading", "Concept", ["(?:CPU|GPU|NVMe|SSD|disk|memory|weight|layer|model|expert)[- ]offload(?:ing)?", "KV[- ]?cache offload(?:ing)?", "offload(?:ing)? to (?:CPU|RAM|NVMe|SSD|disk)", "inference optimi[sz]ation", "run(?:ning)? (?:large|massive|huge) (?:LLMs?|models?) (?:locally|on consumer)", "consumer[- ]grade GPUs?", "quantiz(?:ed|ation) inference"], None),
     ("AI funding", "Concept", ["raises \\$", "funding round", "valuation", "Series [A-F]"], None),
     ("Jobs & AI", "Concept", ["layoffs", "jobs", "workforce"], None),
 ]

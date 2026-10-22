@@ -52,7 +52,8 @@ NOT_AI_SPECIFIC = {"google", "apple", "amazon", "microsoft", "meta", "tesla", "s
                    "snowflake", "palantir", "sk-hynix", "amd", "waymo", "tim-cook", "andy-jassy", "elon-musk",
                    "mark-zuckerberg", "sundar-pichai", "satya-nadella"}
 AI_CONCEPTS = {"ai-agents", "reasoning-models", "open-weight-models", "rag", "agi-superintelligence",
-               "ai-safety-alignment", "coding-agents", "video-generation", "on-device-ai"}
+               "ai-safety-alignment", "coding-agents", "video-generation", "on-device-ai",
+               "local-llm-inference-offloading"}
 
 
 def boost(s):

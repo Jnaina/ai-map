@@ -1,0 +1,9 @@
+{
+  "name": "ai-map-pages",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Cloudflare Pages deploy for Jag's AI Map (static site + visitor analytics on D1)",
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}

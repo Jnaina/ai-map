@@ -1,0 +1,16 @@
+# Cloudflare Pages project config for Jag's AI Map.
+# Direct-upload Pages project (deployed from olaresone via ./build-deploy.sh).
+name = "ai-map"
+compatibility_date = "2026-10-01"
+pages_build_output_dir = "dist"
+
+# D1 database holding the private visitor log. The database_id is filled in by
+# setup-pages.sh after `wrangler d1 create` (or paste it from the dashboard).
+[[d1_databases]]
+binding = "DB"
+database_name = "ai-map-visits"
+database_id = "b6e10f67-3446-4fe8-a9bb-d93b0d374ae2"
+
+# Secrets (NOT stored here) are set once with:
+#   wrangler pages secret put STATS_TOKEN   # the password for /stats.html
+#   wrangler pages secret put IP_SALT       # any random string (unique-visitor hashing)

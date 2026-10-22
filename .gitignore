@@ -8,4 +8,13 @@ data/feed_alert_state.json
 data/feed-cache/
 data/content.sig
 data/.last-deploy.sig
+
+# Cloudflare Pages deploy dir (pages/): commit the source, NEVER the secrets or build output.
+pages/.cf_deploy_token
+pages/.stats_secrets
+pages/.env
+pages/node_modules/
+pages/dist/
+pages/.wrangler/
+pages/backup-*/
 .env

@@ -61,6 +61,8 @@ SOURCE_DOMAINS = {
     "EE Times": "eetimes.com",
     "Semiconductor Engineering": "semiengineering.com",
     "ServeTheHome": "servethehome.com",
+    "Tom's Hardware": "tomshardware.com",
+    "SemiWiki": "semiwiki.com",
     "Microsoft AI Blog": "microsoft.com",
     "Apple Machine Learning": "machinelearning.apple.com",
     "PyTorch": "pytorch.org",

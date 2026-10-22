@@ -152,6 +152,8 @@ RSS_FEEDS = [
     ("EE Times", "https://www.eetimes.com/feed/", 0.8),
     ("Semiconductor Engineering", "https://semiengineering.com/feed/", 0.8),  # chip design / EDA / ASIC / chiplet depth
     ("ServeTheHome", "https://www.servethehome.com/feed/", 0.8),  # server / AI accelerator hardware
+    ("Tom's Hardware", "https://www.tomshardware.com/feeds/all", 0.7),  # consumer/AI hardware (high volume -> capped)
+    ("SemiWiki", "https://semiwiki.com/feed/", 0.7),  # semiconductor industry / IP / design
     # O'Reilly Radar: oreilly.com put the radar feeds behind Akamai bot management (403s even via
     # curl_cffi impersonation) on 2026-10-21. The FeedBurner mirror serves the same content, is
     # fresh, and loads on a plain request (no challenge). This is the full radar feed (not ai-ml
@@ -186,7 +188,7 @@ AI_FILTER_SOURCES = {
     "Finextra", "Bank Automation News", "Tearsheet", "Finovate",
     "Coverager", "Insurance Innovation Reporter", "Slashdot IT",
     "The Next Platform", "IEEE Spectrum Semiconductors", "EE Times",
-    "Semiconductor Engineering", "ServeTheHome",
+    "Semiconductor Engineering", "ServeTheHome", "Tom's Hardware", "SemiWiki",
 }
 
 # Per-feed caps: keep only the N most recent items from a firehose source so it can't
@@ -196,6 +198,7 @@ FEED_CAPS = {
     "MarkTechPost": 20,  # publishes many AI posts/day; cap so it can't flood the window
     "TechNode": 40,  # ~2000-item firehose of general China tech; cap after the AI-relevance gate
     "The Next Platform": 30,  # high-volume AI/HPC hardware feed; cap after the AI-relevance gate
+    "Tom's Hardware": 25,  # high-volume consumer hardware; cap after the AI-relevance gate
 }
 
 # Feeds behind a TLS/JS bot-challenge (e.g. Vercel's "Security Checkpoint") that a plain urllib

@@ -61,6 +61,7 @@ SEED = [
     ("Graphcore", "Company", ["Graphcore", "IPU"], None),
     ("SambaNova", "Company", ["SambaNova"], None),
     ("d-Matrix", "Company", ["d-Matrix"], None),
+    ("Etched", "Company", ["Etched", "Sohu"], None),  # ambiguous ("etched" word / Sohu.com) -> LLM-disambiguated
     ("Perplexity", "Company", ["Perplexity"], None),
     ("Scale AI", "Company", ["Scale AI"], None),
     ("Safe Superintelligence", "Company", ["Safe Superintelligence", "SSI"], None),
@@ -157,6 +158,7 @@ SEED = [
     ("Intel Gaudi", "Hardware", ["Gaudi"], "Intel"),
     ("Meta MTIA", "Hardware", ["MTIA"], "Meta"),
     ("Microsoft Maia", "Hardware", ["Maia 100", "Azure Maia"], "Microsoft"),
+    ("Huawei Ascend", "Hardware", ["Huawei Ascend", "Ascend 910", "Ascend"], "Huawei"),  # "Ascend" ambiguous -> LLM-disambiguated
     # --- people
     ("Sam Altman", "Person", ["Sam Altman", "Altman"], "OpenAI"),
     ("Dario Amodei", "Person", ["Dario Amodei", "Amodei"], "Anthropic"),
@@ -391,6 +393,11 @@ AMBIGUOUS_ENTITIES = {
     "strata": ("Strata, an open-source LLM inference / model-serving engine for running large AI models "
                "locally (e.g. offloading weights to RAM/SSD on a consumer GPU) — NOT geological rock "
                "strata, real-estate/strata-title property, or any unrelated product named Strata"),
+    "etched": ("Etched, an AI-chip startup building the Sohu transformer ASIC (a specialised AI inference "
+               "accelerator) — NOT the ordinary word 'etched' (engraved/carved), and NOT Sohu.com the "
+               "Chinese internet portal/media company"),
+    "huawei-ascend": ("Huawei Ascend, Huawei's line of AI accelerator chips (e.g. Ascend 910) used for AI "
+                      "training/inference — NOT the common verb 'ascend', nor unrelated products named Ascend"),
 }
 
 

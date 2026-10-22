@@ -3,6 +3,7 @@ logs/
 .DS_Store
 __pycache__/
 data/llm-cache.json
+data/llm-disambig-cache.json
 data/feed_health.json
 data/feed_alert_state.json
 data/feed-cache/

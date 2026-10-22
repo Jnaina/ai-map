@@ -371,3 +371,83 @@ def llm_extract(stories, rec, log=print, batch=40):
     except Exception as ex:
         log(f"  ! could not save LLM cache: {ex}")
     return extra
+
+
+# Dictionary entities whose alias is also a common word -> confirm with the LLM, from the article
+# content, that the story is really about the AI project before the match counts. Slug -> description.
+AMBIGUOUS_ENTITIES = {
+    "strata": ("Strata, an open-source LLM inference / model-serving engine for running large AI models "
+               "locally (e.g. offloading weights to RAM/SSD on a consumer GPU) — NOT geological rock "
+               "strata, real-estate/strata-title property, or any unrelated product named Strata"),
+}
+
+
+def llm_disambiguate(stories, mentions, rec, log=print, batch=20):
+    """For entities whose name is a common word (AMBIGUOUS_ENTITIES), ask the LLM whether each story the
+    dictionary matched is actually about the AI project, and drop the match if not. Decisions are cached
+    per (entity, story). A story from the project's own '(releases)' feed is taken as real without asking.
+    If the LLM is unavailable, matches are left as-is (the plain dictionary behaviour)."""
+    pairs = [(eid, sid) for sid, ents in mentions.items() for eid in list(ents) if eid in AMBIGUOUS_ENTITIES]
+    if not pairs:
+        return 0
+    by_id = {s["id"]: s for s in stories}
+    cache_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "llm-disambig-cache.json")
+    try:
+        cache = json.load(open(cache_path))
+    except Exception:
+        cache = {}
+    base = os.environ.get("AIMAP_LLM_BASE_URL")
+    model = os.environ.get("AIMAP_LLM_MODEL")
+    key = os.environ.get("AIMAP_LLM_API_KEY", "none")
+    ck = lambda eid, sid: f"{eid}\u0001{sid}"
+
+    # Release-feed stories for the project are definitionally about it -> auto-confirm (no LLM call).
+    todo = []
+    for eid, sid in pairs:
+        if cache.get(ck(eid, sid)) is not None:
+            continue
+        s = by_id.get(sid)
+        if s and str(s.get("source", "")).endswith("(releases)"):
+            cache[ck(eid, sid)] = True
+        else:
+            todo.append((eid, sid))
+
+    if todo and base and model:
+        for i in range(0, len(todo), batch):
+            chunk = todo[i:i + batch]
+            lines = []
+            for j, (eid, sid) in enumerate(chunk):
+                s = by_id[sid]
+                snippet = (s.get("text") or s.get("title") or "")[:300]
+                lines.append(f"{j}. PROJECT: {AMBIGUOUS_ENTITIES[eid]}\n   STORY: {snippet}")
+            prompt = ("For each numbered item, decide from the STORY's content whether it is really about the "
+                      "named PROJECT. Reply ONLY with JSON: "
+                      '{"items":[{"i":<number>,"match":true|false}]}\n\n' + "\n".join(lines))
+            try:
+                body = json.dumps({"model": model, "temperature": 0,
+                                   "messages": [{"role": "user", "content": prompt}],
+                                   "chat_template_kwargs": {"enable_thinking": False}}).encode()
+                req = urllib.request.Request(base.rstrip("/") + "/chat/completions", data=body,
+                                             headers={"Content-Type": "application/json",
+                                                      "Authorization": f"Bearer {key}"})
+                out = json.loads(urllib.request.urlopen(req, timeout=300).read())
+                txt = out["choices"][0]["message"]["content"]
+                txt = txt[txt.find("{"): txt.rfind("}") + 1]
+                for it in json.loads(txt).get("items", []):
+                    eid, sid = chunk[int(it["i"])]
+                    cache[ck(eid, sid)] = bool(it.get("match"))
+            except Exception as ex:
+                log(f"  ! disambiguate batch {i // batch}: {str(ex)[:100]}")
+
+    dropped = 0
+    for eid, sid in pairs:
+        if cache.get(ck(eid, sid)) is False:
+            mentions[sid].discard(eid)
+            dropped += 1
+    try:
+        json.dump(cache, open(cache_path, "w"))
+    except Exception as ex:
+        log(f"  ! disambiguate cache write: {str(ex)[:60]}")
+    if dropped:
+        log(f"Disambiguation: dropped {dropped} false ambiguous-name match(es)")
+    return dropped

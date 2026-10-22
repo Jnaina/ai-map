@@ -29,7 +29,7 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(__file__))
 import articles_db  # noqa: E402
-from entities import AI_RX, Recogniser, llm_extract  # noqa: E402
+from entities import AI_RX, Recogniser, llm_disambiguate, llm_extract  # noqa: E402
 from sources import AI_FILTER_SOURCES, fetch_all  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -227,6 +227,14 @@ def main():
 
     rec = Recogniser()
     mentions = {s["id"]: rec.find(s) for s in stories}
+
+    # Ambiguous dictionary names (e.g. "Strata" the AI engine vs the common word): ask the LLM to
+    # confirm, from each story's content, that the match is really the AI project — before the match
+    # counts toward the AI-relevance gate or the map. Best-effort; never breaks the build.
+    try:
+        llm_disambiguate(stories, mentions, rec)
+    except Exception as e:
+        print(f"[disambiguate] skipped: {e}")
 
     # "AI-specific" entity: not just a big-tech name ("Apple"/"Amazon") or a generic concept.
     def ai_specific(e):

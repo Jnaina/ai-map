@@ -1,9 +1,9 @@
 [Unit]
-Description=Refresh Jag's AI Map every hour
+Description=Refresh Jag's AI Map every 2 minutes (Hacker News fast lane; other sources throttled to ~1h; deploy-on-change)
 
 [Timer]
-OnCalendar=hourly
-RandomizedDelaySec=120
+OnCalendar=*:0/2
+RandomizedDelaySec=15
 Persistent=true
 
 [Install]

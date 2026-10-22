@@ -35,7 +35,21 @@ find logs -name 'deploy-*.log' -mtime +14 -delete 2>/dev/null || true
 
 # Optional: push the freshly built static site to Cloudflare Pages (set AIMAP_DEPLOY=pages
 # in .env once the Pages project is set up). Best-effort: a deploy failure never fails the build.
+# Deploy-on-change: on the fast (~2 min) cadence most runs produce no new content (Hacker News is
+# the only thing polled every run), so we only deploy when the story-content signature written by
+# build.py changes. This keeps Cloudflare deploys proportional to real changes, not to the timer.
 if [ "${AIMAP_DEPLOY:-}" = "pages" ]; then
-  echo "Deploying to Cloudflare Pages..."
-  ./pages/build-deploy.sh 2>&1 | tee "logs/deploy-$(date +%Y%m%d-%H%M).log" || echo "Pages deploy failed (continuing)"
+  SIG="$(cat data/content.sig 2>/dev/null)"
+  LAST="$(cat data/.last-deploy.sig 2>/dev/null)"
+  if [ -n "$SIG" ] && [ "$SIG" = "$LAST" ]; then
+    echo "No content change since last deploy; skipping Cloudflare Pages deploy."
+  else
+    echo "Content changed; deploying to Cloudflare Pages..."
+    ./pages/build-deploy.sh 2>&1 | tee "logs/deploy-$(date +%Y%m%d-%H%M).log"
+    if [ "${PIPESTATUS[0]}" -eq 0 ]; then
+      echo "$SIG" > data/.last-deploy.sig   # only advance the marker on a successful deploy
+    else
+      echo "Pages deploy failed (continuing; will retry next run)"
+    fi
+  fi
 fi

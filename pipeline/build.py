@@ -18,6 +18,7 @@ Breaking: a separate flag: in the last 6 h the entity got >= 2 stories and at le
 Links:    entities that appear in the same stories (decayed weight), plus parent links.
 """
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -253,6 +254,17 @@ def main():
         build_view(v, stories, mentions, rec, now, hist, breaking, stamp)
     hist["runs"] = (hist["runs"] + [stamp])[-200:]
     json.dump(hist, open(HISTORY, "w"))
+
+    # Deploy-on-change signature: hash the story set + engagement that actually feeds the map (NOT
+    # the time-decayed heat, which shifts every run), so run.sh can skip a Cloudflare deploy when
+    # nothing meaningful changed between fast runs. Written to the internal data/ dir, not web/data.
+    try:
+        sig_src = sorted((s["id"], int(s.get("engagement") or 0)) for s in stories)
+        sig = hashlib.sha1(json.dumps(sig_src).encode()).hexdigest()
+        with open(os.path.join(ROOT, "data", "content.sig"), "w") as f:
+            f.write(sig)
+    except Exception as e:
+        print(f"[content-sig] skipped: {e}")
 
     # Archive every link that fed the map into SQLite, then export the last 30 days
     # for the Articles page. Never let this break the map build.

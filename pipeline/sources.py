@@ -179,10 +179,19 @@ FEED_CAPS = {
 # installed (optional); without it these feeds are simply skipped.
 IMPERSONATE_FEEDS = {"VentureBeat AI", "Endpoints News", "Bank Automation News"}
 
-# Feeds to fetch at most once every N hours (the pipeline runs hourly). Between live fetches the
-# last good result is reused (and served as a fallback on failure), so the feed stays in the map
-# without being hit every run. Use this for sources that rate-limit us on an hourly cadence.
-FEED_INTERVAL_HOURS = {}
+# The pipeline runs on a fast cadence (every ~2 min) so Hacker News — the high-churn, high-AI
+# source, fetched unconditionally below — stays near real-time. Everything else is throttled so it
+# is only actually hit about once an hour: between live fetches the last good result is reused (and
+# served as a fallback on failure). DEFAULT_FEED_INTERVAL_HOURS applies to every RSS feed and to
+# the HF/GitHub APIs; FEED_INTERVAL_HOURS overrides it per feed (longer for sources that rate-limit
+# or block us — see the feed-health history).
+DEFAULT_FEED_INTERVAL_HOURS = 1
+FEED_INTERVAL_HOURS = {
+    "VentureBeat AI": 2,   # hard 429 rate-limiter (per-IP), even with browser impersonation
+    "KDnuggets": 2,        # intermittent 403 WAF block
+    "SemiAnalysis": 3,     # mostly-paywalled, intermittent 403; low value
+    "TechNode": 2,         # ~2000-item firehose of general China tech
+}
 FEED_CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "feed-cache")
 
 GITHUB_TOPICS = ["llm", "ai-agents", "agents", "generative-ai", "mcp", "large-language-models", "rag", "ai"]
@@ -411,21 +420,48 @@ def _fetch_rss_throttled(name, url, weight, since, interval_h, log):
     return fresh
 
 
+def _throttled(key, interval_h, since, fn, log):
+    """Throttle any fetcher (HF/GitHub) the same way _fetch_rss_throttled does for RSS: call `fn`
+    at most once per `interval_h`, reusing the cached result (filtered to the window) in between
+    and as a fallback on failure. Keeps HN fast while these APIs are only hit ~hourly."""
+    os.makedirs(FEED_CACHE_DIR, exist_ok=True)
+    path = os.path.join(FEED_CACHE_DIR, "api_" + re.sub(r"[^A-Za-z0-9]+", "_", key) + ".json")
+    cache = None
+    if os.path.exists(path):
+        try:
+            cache = json.load(open(path))
+        except Exception:
+            cache = None
+    in_window = lambda ss: [s for s in ss if s.get("published") is None or s.get("published", 0) >= since]
+    if cache and (time.time() - cache.get("ts", 0)) < interval_h * 3600:
+        fresh = in_window(cache.get("stories", []))
+        due_in = interval_h - (time.time() - cache["ts"]) / 3600
+        log(f"  {key}: {len(fresh)} (cached; next fetch in {due_in:.1f} h)")
+        return fresh
+    out = fn()
+    stories = out if out else (cache.get("stories", []) if cache else [])
+    try:  # stamp the attempt time (success or not) so the interval backoff holds
+        json.dump({"ts": time.time(), "stories": stories}, open(path, "w"))
+    except Exception as e:
+        log(f"  ! {key}: cache write failed: {str(e)[:60]}")
+    return in_window(stories)
+
+
 def fetch_all(window_days=7, log=print):
     now = time.time()
     since = now - window_days * 86400
     stories = []
     log("Fetching sources...")
-    stories += fetch_hn(since, log)
+    stories += fetch_hn(since, log)  # fast lane: fetched every run (near real-time)
     for name, url, w in RSS_FEEDS:
-        iv = FEED_INTERVAL_HOURS.get(name)
+        iv = FEED_INTERVAL_HOURS.get(name, DEFAULT_FEED_INTERVAL_HOURS)
         if iv:
             stories += _fetch_rss_throttled(name, url, w, since, iv, log)
         else:
             stories += fetch_rss(name, url, w, since, log)
-    stories += fetch_hf_papers(since, log)
-    stories += fetch_hf_models(since, log, now)
-    stories += fetch_github(since, log)
+    stories += _throttled("HF papers", DEFAULT_FEED_INTERVAL_HOURS, since, lambda: fetch_hf_papers(since, log), log)
+    stories += _throttled("HF models", DEFAULT_FEED_INTERVAL_HOURS, since, lambda: fetch_hf_models(since, log, now), log)
+    stories += _throttled("GitHub", DEFAULT_FEED_INTERVAL_HOURS, since, lambda: fetch_github(since, log), log)
     # de-duplicate by URL (same article posted to HN and a feed counts once per source)
     seen, uniq = set(), []
     for s in stories:

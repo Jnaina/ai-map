@@ -6,4 +6,6 @@ data/llm-cache.json
 data/feed_health.json
 data/feed_alert_state.json
 data/feed-cache/
+data/content.sig
+data/.last-deploy.sig
 .env

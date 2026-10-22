@@ -120,3 +120,16 @@ dialog h3{font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacin
   #panel{top:auto;left:10px;right:10px;bottom:10px;width:auto;max-height:62vh}
   #legend{display:none}
 }
+
+/* "Fresh data" pill — shown when a newer backend build arrives while the viewer is actively
+   exploring (if they're idle, the new data is applied silently instead). Clicking it crossfades
+   the map to the latest build, preserving zoom/filters/selection. Matches the minimal ink chrome. */
+#freshPill{position:fixed;left:50%;bottom:64px;transform:translateX(-50%) translateY(10px);
+  z-index:8;background:var(--ink);color:var(--bg);border:1px solid var(--ink);border-radius:0;
+  padding:9px 15px;font:inherit;font-size:12px;cursor:pointer;letter-spacing:.2px;
+  box-shadow:0 6px 22px rgba(0,0,0,.28);opacity:0;pointer-events:none;
+  transition:opacity .35s ease,transform .35s ease}
+#freshPill.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+#freshPill:hover{background:var(--accent);border-color:var(--accent)}
+#freshPill b{font-weight:600}
+@media (max-width:760px){#freshPill{bottom:14px}}

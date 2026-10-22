@@ -150,6 +150,9 @@ RSS_FEEDS = [
     # fresh, and loads on a plain request (no challenge). This is the full radar feed (not ai-ml
     # only), so it's AI-gated below.
     ("O'Reilly Radar", "https://feeds.feedburner.com/oreilly/radar/atom", 1.0),
+    # Slashdot has no AI-only feed; the IT section (RSS 1.0/RDF) has the best AI density, so take it
+    # AI-gated. Expect heavy overlap with HN + the tech feeds (pipeline dedups by URL).
+    ("Slashdot IT", "https://rss.slashdot.org/Slashdot/slashdotIt", 0.7),
 ]
 
 # Feeds that are NOT AI-only (general tech/research/news). Stories from these are kept only
@@ -163,7 +166,7 @@ AI_FILTER_SOURCES = {
     "Data Center Knowledge", "VentureBeat AI", "O'Reilly Radar",
     "Lancet Digital Health", "Endpoints News", "STAT Health Tech",
     "Finextra", "Bank Automation News", "Tearsheet", "Finovate",
-    "Coverager", "Insurance Innovation Reporter",
+    "Coverager", "Insurance Innovation Reporter", "Slashdot IT",
 }
 
 # Per-feed caps: keep only the N most recent items from a firehose source so it can't

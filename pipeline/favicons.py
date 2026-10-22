@@ -55,6 +55,7 @@ SOURCE_DOMAINS = {
     "Anthropic Engineering": "anthropic.com",
     "Anthropic Red Teaming": "anthropic.com",
     "Thinking Machines": "thinkingmachines.ai",
+    "Slashdot IT": "slashdot.org",
     "Microsoft AI Blog": "microsoft.com",
     "Apple Machine Learning": "machinelearning.apple.com",
     "PyTorch": "pytorch.org",

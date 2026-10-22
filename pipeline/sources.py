@@ -189,6 +189,7 @@ AI_FILTER_SOURCES = {
     "Coverager", "Insurance Innovation Reporter", "Slashdot IT",
     "The Next Platform", "IEEE Spectrum Semiconductors", "EE Times",
     "Semiconductor Engineering", "ServeTheHome", "Tom's Hardware", "SemiWiki",
+    "NVIDIA Blog",  # whole-blog feed: gate out GeForce/automotive/Omniverse non-AI posts
 }
 
 # Per-feed caps: keep only the N most recent items from a firehose source so it can't

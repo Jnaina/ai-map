@@ -120,7 +120,7 @@
       ${spark(d.series)}
       <p class="meta">first spotted ${new Date(d.first_seen).toLocaleDateString(undefined, { day: "numeric", month: "short" })} · ${Object.entries(d.sources).map(([s, n]) => `${esc(s)} ${n}`).join(" · ")}</p>
       <h3>Top stories</h3>
-      <ul class="stories">${d.top_stories.map((s) => `
+      <ul class="stories">${d.top_stories.slice().sort((a, b) => new Date(b.published) - new Date(a.published)).map((s) => `
         <li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>
         <div class="meta">${esc(s.source)} · ${ago(s.published)}${s.discussion ? ` · <a href="${esc(s.discussion)}" target="_blank" rel="noopener">discussion</a>` : ""}</div></li>`).join("")}</ul>
       ${nb.length ? `<h3>Connected</h3><div class="conn">${nb.map((n) => `<span data-id="${esc(n.id)}" role="button" tabindex="0">${esc(n.label)}</span>`).join("")}</div>` : ""}`;

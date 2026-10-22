@@ -145,6 +145,13 @@ RSS_FEEDS = [
     ("Pandaily", "https://pandaily.com/feed/", 0.7),  # Beijing tech news
     ("Import AI", "https://importai.substack.com/feed", 1.0),  # Jack Clark (Anthropic co-founder): weekly AI research + policy
     ("Data Center Knowledge", "https://www.datacenterknowledge.com/rss.xml", 0.8),  # authoritative DC trade press; AI-gated (hyperscale/GPU/power-for-AI)
+    # AI-chip / semiconductor trade press (AI-gated): feeds the "AI chips" concept (FPGA, ASIC, NPU,
+    # wafer-scale, chiplets, accelerators) and the "Export controls" concept.
+    ("The Next Platform", "https://www.nextplatform.com/feed/", 0.9),  # AI/HPC datacenter silicon (high volume -> capped)
+    ("IEEE Spectrum Semiconductors", "https://spectrum.ieee.org/feeds/topic/semiconductors.rss", 0.9),
+    ("EE Times", "https://www.eetimes.com/feed/", 0.8),
+    ("Semiconductor Engineering", "https://semiengineering.com/feed/", 0.8),  # chip design / EDA / ASIC / chiplet depth
+    ("ServeTheHome", "https://www.servethehome.com/feed/", 0.8),  # server / AI accelerator hardware
     # O'Reilly Radar: oreilly.com put the radar feeds behind Akamai bot management (403s even via
     # curl_cffi impersonation) on 2026-10-21. The FeedBurner mirror serves the same content, is
     # fresh, and loads on a plain request (no challenge). This is the full radar feed (not ai-ml
@@ -178,6 +185,8 @@ AI_FILTER_SOURCES = {
     "Lancet Digital Health", "Endpoints News", "STAT Health Tech",
     "Finextra", "Bank Automation News", "Tearsheet", "Finovate",
     "Coverager", "Insurance Innovation Reporter", "Slashdot IT",
+    "The Next Platform", "IEEE Spectrum Semiconductors", "EE Times",
+    "Semiconductor Engineering", "ServeTheHome",
 }
 
 # Per-feed caps: keep only the N most recent items from a firehose source so it can't
@@ -186,6 +195,7 @@ FEED_CAPS = {
     "arXiv cs.AI": 50,
     "MarkTechPost": 20,  # publishes many AI posts/day; cap so it can't flood the window
     "TechNode": 40,  # ~2000-item firehose of general China tech; cap after the AI-relevance gate
+    "The Next Platform": 30,  # high-volume AI/HPC hardware feed; cap after the AI-relevance gate
 }
 
 # Feeds behind a TLS/JS bot-challenge (e.g. Vercel's "Security Checkpoint") that a plain urllib

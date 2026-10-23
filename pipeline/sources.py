@@ -295,6 +295,38 @@ GITHUB_TOPICS = ["llm", "ai-agents", "agents", "generative-ai", "mcp", "large-la
                  # inference-optimisation / local-LLM discovery: surface the next ktransformers/PowerInfer
                  "llm-inference", "inference", "llm-serving", "quantization", "local-llm", "on-device-ai", "gguf"]
 
+# --- "Trending AI Repos" lane --------------------------------------------------------------------
+# Star *velocity* across the top AI-topic repos, computed from a daily snapshot store. Unlike
+# fetch_github (which only finds repos born in the last 30 days with an AI topic tag), this catches
+# repos that are *accelerating* now, including older ones that suddenly go viral (the OpenShell case).
+STARS_SNAPSHOT = os.path.join(os.path.dirname(FEED_CACHE_DIR), "github-stars.json")  # data/github-stars.json
+TREND_MIN_STARS = 300       # pool floor: only track repos with at least this many stars
+TREND_D1_FLOOR = 50         # include a repo if it gained >= this many stars in ~1 day,
+TREND_D7_FLOOR = 150        #   ...or this many in ~7 days (steady climbers that don't spike in a day),
+TREND_PCT7 = 0.25           #   ...or grew by >= this fraction over 7 days (relative surge)
+TREND_PCT7_MIN_ABS = 100    #      but only when the absolute 7-day gain clears this (skip tiny bases).
+TREND_MAX = 15              # hard cap on how many trending repos reach the map
+TREND_MAX_AVG_PER_DAY = 700 # star-farm guard: drop repos (older than 45 d) averaging more than this
+TREND_SNAPSHOT_DAYS = 35    # retention of the daily snapshot store (headroom over the 30-day series)
+
+
+def _load_star_snaps():
+    try:
+        snaps = json.load(open(STARS_SNAPSHOT))
+        return snaps if isinstance(snaps, list) else []
+    except Exception:
+        return []
+
+
+def _nearest_snap(snaps, target_ts, tol):
+    """Star map of the snapshot whose timestamp is closest to target_ts within tol seconds, else None."""
+    best, bestd = None, tol
+    for sn in snaps:
+        d = abs(sn.get("ts", 0) - target_ts)
+        if d <= bestd:
+            best, bestd = sn, d
+    return best.get("stars", {}) if best else None
+
 
 def _get(url, headers=None, impersonate=False, timeout=TIMEOUT):
     if impersonate and _cffi is not None:
@@ -514,6 +546,97 @@ def fetch_github(since, log):
     return out
 
 
+def fetch_trending_repos(since, log):
+    """Rank the top AI-topic repos by star *velocity* and emit the top TREND_MAX as repo stories,
+    each carrying a 30-day star series for a sparkline. Stores one star snapshot per day in
+    github-stars.json; velocity is current stars minus the snapshot ~1 day / ~7 days ago. During
+    the first week (no history yet) it falls back to ranking by total stars. Best-effort; never raises."""
+    tok = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    hdr = {"Accept": "application/vnd.github+json", **({"Authorization": f"Bearer {tok}"} if tok else {})}
+    pool = {}  # full_name -> current repo dict (max stars seen across topics)
+    for topic in GITHUB_TOPICS:
+        q = urllib.parse.urlencode({"q": f"topic:{topic}", "sort": "stars", "order": "desc", "per_page": 50})
+        try:
+            data = json.loads(_get("https://api.github.com/search/repositories?" + q, hdr))
+        except Exception as e:
+            log(f"  ! trending topic:{topic}: {str(e)[:80]}")
+            continue
+        for r in data.get("items", []):
+            st = r.get("stargazers_count", 0)
+            if st < TREND_MIN_STARS or r.get("archived"):
+                continue
+            pushed = _parse_date(r.get("pushed_at")) or 0
+            if pushed and pushed < time.time() - 180 * 86400:  # drop abandoned repos
+                continue
+            # Star-farm guard: no legit repo sustains a huge lifetime-average star rate for months.
+            # Fakes (e.g. 300k+ stars on a repo < 1 yr old) show implausible avg/day; real top AI
+            # repos sit well under 200/day. Drop repos older than 45 d averaging > 700 stars/day.
+            created = _parse_date(r.get("created_at")) or 0
+            age_d = (time.time() - created) / 86400 if created else 0
+            if age_d > 45 and st / age_d > TREND_MAX_AVG_PER_DAY:
+                continue
+            fn = r["full_name"]
+            if fn not in pool or st > pool[fn].get("stargazers_count", 0):
+                pool[fn] = r
+        time.sleep(1.5 if tok else 7)  # unauthenticated search allows 10 requests/minute
+    if not pool:
+        log("  Trending AI repos: pool empty (API unreachable)")
+        return []
+
+    now = time.time()
+    cur = {fn: r.get("stargazers_count", 0) for fn, r in pool.items()}
+    snaps = _load_star_snaps()
+    # Append today's snapshot at most once per ~day; within a day, refresh today's counts in place.
+    if not snaps or (now - snaps[-1].get("ts", 0)) >= 20 * 3600:
+        snaps.append({"ts": now, "stars": cur})
+    else:
+        snaps[-1] = {"ts": now, "stars": {**snaps[-1].get("stars", {}), **cur}}
+    cutoff = now - TREND_SNAPSHOT_DAYS * 86400
+    snaps = [s for s in snaps if s.get("ts", 0) >= cutoff]
+    try:
+        json.dump(snaps, open(STARS_SNAPSHOT, "w"))
+    except Exception as e:
+        log(f"  ! star snapshot write: {str(e)[:60]}")
+
+    d1map = _nearest_snap(snaps, now - 86400, 12 * 3600)       # ~1 day ago (±12 h)
+    d7map = _nearest_snap(snaps, now - 7 * 86400, 2 * 86400)   # ~7 days ago (±2 d)
+
+    scored = []
+    for fn, r in pool.items():
+        st = cur[fn]
+        d1 = (st - d1map[fn]) if d1map and fn in d1map else None
+        base7 = d7map.get(fn) if d7map else None
+        d7 = (st - base7) if base7 is not None else None
+        pct7 = (d7 / base7) if (d7 is not None and base7) else None
+        series = [{"d": datetime.fromtimestamp(sn["ts"], timezone.utc).strftime("%Y-%m-%d"), "s": sn["stars"][fn]}
+                  for sn in snaps if fn in sn.get("stars", {})][-30:]
+        surging = pct7 is not None and pct7 >= TREND_PCT7 and (d7 or 0) >= TREND_PCT7_MIN_ABS
+        cold = d1 is None and d7 is None                       # no history yet (first week)
+        include = cold or (d1 is not None and d1 >= TREND_D1_FLOOR) \
+            or (d7 is not None and d7 >= TREND_D7_FLOOR) or surging
+        if not include:
+            continue
+        # rank by 1-day velocity; fall back to 7-day/day, then (cold start) total stars
+        rank = d1 if d1 is not None else (d7 / 7.0 if d7 is not None else st / 1000.0)
+        scored.append((rank, fn, r, d1, d7, pct7, series, surging))
+
+    scored.sort(key=lambda x: -(x[0] or 0))
+    out = []
+    for rank, fn, r, d1, d7, pct7, series, surging in scored[:TREND_MAX]:
+        desc = r.get("description") or ""
+        name = fn.split("/", 1)[1]
+        out.append(dict(
+            id=f"ghtrend:{fn}", title=f"{fn}: {desc}"[:200], url=r["html_url"],
+            source="Trending AI Repos", kind="repo", published=now,
+            engagement=r.get("stargazers_count", 0), weight=0.8,
+            text=f"{name} {desc}", gh_repo=fn,
+            star_delta_1d=d1, star_delta_7d=d7, star_pct_7d=(round(pct7, 3) if pct7 is not None else None),
+            star_series=series, surging=surging))
+    phase = "cold start: by total stars" if not (d1map or d7map) else "by star velocity"
+    log(f"  Trending AI repos: {len(out)} of {len(pool)} tracked ({phase}); {len(snaps)} daily snapshots")
+    return out
+
+
 def _fetch_rss_throttled(name, url, weight, since, interval_h, log):
     """Fetch at most once per `interval_h`, reusing the cached result in between (and as a
     fallback if a live fetch fails/returns nothing). Keeps a rate-limited feed in the map
@@ -587,6 +710,7 @@ def fetch_all(window_days=7, log=print):
     stories += _throttled("HF papers", DEFAULT_FEED_INTERVAL_HOURS, since, lambda: fetch_hf_papers(since, log), log)
     stories += _throttled("HF models", DEFAULT_FEED_INTERVAL_HOURS, since, lambda: fetch_hf_models(since, log, now), log)
     stories += _throttled("GitHub", DEFAULT_FEED_INTERVAL_HOURS, since, lambda: fetch_github(since, log), log)
+    stories += _throttled("GitHub trending", DEFAULT_FEED_INTERVAL_HOURS, since, lambda: fetch_trending_repos(since, log), log)
     # de-duplicate by URL (same article posted to HN and a feed counts once per source)
     seen, uniq = set(), []
     for s in stories:

@@ -42,7 +42,7 @@
   // ============================================================================================
   function visible(d) {
     const st = $("#status").value;
-    return activeTypes.has(d.type) && (st === "all" || (st === "breaking" ? !!d.breaking : d.status === st));
+    return activeTypes.has(d.type) && (st === "all" || (st === "breaking" ? (!!d.breaking || !!d.surging) : d.status === st));
   }
   function applyFilters() {
     nodeSel.style("display", (d) => (visible(d) ? null : "none"));
@@ -99,6 +99,25 @@
     return `<svg class="spark" viewBox="0 0 300 40" preserveAspectRatio="none" aria-label="Heat over recent refreshes"><polyline points="${pts}" fill="none" stroke="#1d1d1d" stroke-width="1.5"/></svg>`;
   }
 
+  // Star-history sparkline for a trending repo: absolute star counts over up to 30 daily snapshots,
+  // with a "+N★ this week" caption. Separate from spark() (which plots a node's recent heat).
+  function starSpark(d) {
+    const s = d.star_series || [];
+    const g = d.star_growth || {};
+    const latest = s.length ? s[s.length - 1].s : null;
+    if (s.length < 2) {
+      return latest != null ? `<p class="meta">★ ${latest.toLocaleString()} · star history builds over the next few days</p>` : "";
+    }
+    const v = s.map((p) => p.s), max = Math.max(...v), min = Math.min(...v);
+    const pts = v.map((y, i) => `${(i / (v.length - 1)) * 300},${36 - ((y - min) / (max - min || 1)) * 32}`).join(" ");
+    const wk = g.d7 != null ? `+${g.d7.toLocaleString()}★ this week${g.pct7 != null ? ` (${Math.round(g.pct7 * 100)}%)` : ""}`
+      : (g.d1 != null ? `+${g.d1.toLocaleString()}★ today` : "star history");
+    return `<div class="starwrap"><div class="starhead"><span>★ ${v[v.length - 1].toLocaleString()}</span>`
+      + `<span class="${d.surging ? "surge" : "meta"}">${wk}</span></div>`
+      + `<svg class="spark starspark" viewBox="0 0 300 40" preserveAspectRatio="none" aria-label="GitHub stars over time">`
+      + `<polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></div>`;
+  }
+
   function renderPanel(d) {
     const nb = [...neigh.get(d.id).entries()].sort((a, b) => b[1] - a[1]).slice(0, 16).map(([id]) => byId.get(id));
     const trendTxt = d.trend >= 9.9 ? `new in last ${lag} h` : `${d.trend >= 1 ? "+" : ""}${Math.round((d.trend - 1) * 100)}% vs ${lag} h ago`;
@@ -108,6 +127,7 @@
       <div class="badges">
         <span>${esc(d.topic ? "topic" : d.type.toLowerCase())}</span>
         ${d.breaking ? `<span class="badge breaking">breaking: ${d.breaking.last6h} stories in last 6 h (${d.breaking.ratio}× the 6 h before)</span>` : ""}
+        ${d.surging ? '<span class="badge surging">surging on GitHub</span>' : ""}
         ${d.status === "new" ? '<span class="badge new">new this week</span>' : ""}
         ${d.status === "rising" ? '<span class="badge rising">rising</span>' : ""}
         ${parent ? `<span>part of ${esc(parent.label)}</span>` : ""}
@@ -117,7 +137,7 @@
         <div class="stat"><b>${d.heat.toFixed(1)}</b><span>${esc(trendTxt)}</span></div>
         <div class="stat"><b>${d.stories}</b><span>stories ${view === "today" ? "today" : "this week"}</span></div>
       </div>
-      ${spark(d.series)}
+      ${d.star_series ? starSpark(d) : spark(d.series)}
       <p class="meta">first spotted ${new Date(d.first_seen).toLocaleDateString(undefined, { day: "numeric", month: "short" })} · ${Object.entries(d.sources).map(([s, n]) => `${esc(s)} ${n}`).join(" · ")}</p>
       <h3>Top stories</h3>
       <ul class="stories">${d.top_stories.slice().sort((a, b) => new Date(b.published) - new Date(a.published)).map((s) => `
@@ -162,7 +182,8 @@
   }
 
   function renderBreakingPanel() {
-    const br = nodes.filter((n) => n.breaking).sort((a, b) => (b.breaking.ratio || 0) - (a.breaking.ratio || 0));
+    const score = (n) => (n.breaking ? (n.breaking.ratio || 0) : 0) + (n.surging ? 1 + (n.star_growth?.pct7 || 0) : 0);
+    const br = nodes.filter((n) => n.breaking || n.surging).sort((a, b) => score(b) - score(a));
     select(null); // clear any node selection, then show our own panel
     if (!br.length) {
       $("#panelBody").innerHTML = `<h2>Breaking now</h2><p class="meta">Nothing is breaking right now.</p>`;
@@ -179,11 +200,12 @@
     };
     $("#panelBody").innerHTML = `
       <h2>Breaking now</h2>
-      <div class="badges"><span>${br.length} ${br.length === 1 ? "entity" : "entities"} surging in the last 6 h</span></div>
+      <div class="badges"><span>${br.length} ${br.length === 1 ? "entity" : "entities"} surging right now</span></div>
       ${br.map((d) => `
         <div class="brk">
           <h3 class="brkHead" data-id="${esc(d.id)}" role="button" tabindex="0" title="Show on the map">${esc(d.label)}
-            <span class="badge breaking">${d.breaking.last6h} in 6 h · ${d.breaking.ratio}×</span></h3>
+            <span class="badge breaking">${d.breaking ? `${d.breaking.last6h} in 6 h · ${d.breaking.ratio}×`
+              : `+${(d.star_growth?.d7 ?? 0).toLocaleString()}★ / 7 d${d.star_growth?.pct7 != null ? ` · ${Math.round(d.star_growth.pct7 * 100)}%` : ""}`}</span></h3>
           <ul class="stories">${latestNews(d).map((s) => `
             <li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>
             <div class="meta">${esc(s.source)} · ${ago(s.published)}${s.discussion ? ` · <a href="${esc(s.discussion)}" target="_blank" rel="noopener">discussion</a>` : ""}</div></li>`).join("")}</ul>
@@ -259,7 +281,7 @@
     // ---- header / legend / source list / search autocomplete
     document.querySelector(".tag").textContent = view === "today" ? "what's hot in AI right now · last 24 hours" : "what's heating up in AI · last 7 days";
     $("#legTrend").textContent = `↑ rising · ↓ cooling (vs ${lag} h ago)`;
-    const nBreaking = nodes.filter((n) => n.breaking).length;
+    const nBreaking = nodes.filter((n) => n.breaking || n.surging).length;
     $("#updated").innerHTML = `updated ${esc(ago(data.generated_at))} · ${data.story_count} stories · refreshes hourly`
       + (nBreaking ? ` · <button id="breakingBtn" class="linklike" title="Show the breaking entities">${nBreaking} breaking</button>` : "");
     if (nBreaking) $("#breakingBtn").addEventListener("click", renderBreakingPanel);
@@ -285,12 +307,12 @@
     nodeSel.filter((d) => !d.topic).append("circle").attr("class", "dot").attr("r", (d) => d.size).attr("fill", (d) => d.tone);
     nodeSel.filter((d) => d.status === "new").append("circle").attr("class", "newring")
       .attr("r", (d) => (d.topic ? d.size * 0.95 : d.size + 5));
-    nodeSel.filter((d) => d.breaking).append("circle").attr("class", "breakring").attr("r", (d) => (d.topic ? d.size : d.size + 7));
+    nodeSel.filter((d) => d.breaking || d.surging).append("circle").attr("class", "breakring").attr("r", (d) => (d.topic ? d.size : d.size + 7));
     // invisible hit area so small dots are easy to click
     nodeSel.append("circle").attr("r", (d) => Math.max(10, d.size)).attr("fill", "transparent");
 
     labelSel = root.append("g").selectAll("text").data(nodes, (d) => d.id).join("text")
-      .attr("class", (d) => "label" + (d.topic ? " topic" : "") + (d.breaking ? " breaking" : ""))
+      .attr("class", (d) => "label" + (d.topic ? " topic" : "") + (d.breaking || d.surging ? " breaking" : ""))
       .attr("text-anchor", "middle")
       .attr("dy", (d) => (d.topic ? d.size * 0.72 + 17 : d.size + 13))
       .attr("font-size", (d) => (d.topic ? null : 10.5 + 2.5 * Math.sqrt(d.heat_norm) + "px"))

@@ -1,5 +1,4 @@
 data/stories-cache.json
-data/body-cache.json
 logs/
 .DS_Store
 __pycache__/
@@ -8,6 +7,7 @@ data/llm-disambig-cache.json
 data/feed_health.json
 data/feed_alert_state.json
 data/feed-cache/
+data/github-stars.json
 data/content.sig
 data/.last-deploy.sig
 

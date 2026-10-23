@@ -276,6 +276,9 @@ SEED = [
                              "chips?|GPUs?|silicon|accelerators?|foundation models?)",
                              "China'?s (?:open[- ]weights?|AI (?:models?|labs?|chips?|ambitions?|race)|chip|GPU)",
                              "made in China AI"], None),
+    # Hub for the "Trending AI Repos" lane: every trending repo is routed to this concept in
+    # build.py so they cluster on the map. Aliases are unlikely to occur in prose (routing, not text).
+    ("Trending repos", "Concept", ["trending AI repos", "trending AI repositories"], None),
 ]
 
 # Versioned model-name discovery: (regex, family-prefix normaliser, parent)

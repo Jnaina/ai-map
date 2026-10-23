@@ -62,6 +62,12 @@ button.ghost{background:transparent}
 #panel h2{margin:0 26px 2px 0;font-size:18px}
 .badges{display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 12px;color:var(--mid);font-size:12px}
 .badge.new,.badge.rising{color:var(--accent)}
+.badge.surging{color:var(--accent);font-weight:700}
+.starwrap{margin-bottom:8px;color:var(--accent)}
+.starhead{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;font-weight:700;margin-bottom:2px}
+.starhead .meta{color:var(--mid);font-weight:400}
+.starhead .surge{color:var(--accent);font-weight:700}
+.starspark{color:var(--accent)}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);margin-bottom:10px}
 .stat{padding:8px 0}
 .stat b{display:block;font-size:16px}

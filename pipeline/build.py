@@ -29,7 +29,7 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(__file__))
 import articles_db  # noqa: E402
-from entities import AI_RX, CHINA_AI, Recogniser, llm_disambiguate, llm_extract  # noqa: E402
+from entities import AI_RX, CHINA_AI, Recogniser, llm_disambiguate, llm_extract, slug  # noqa: E402
 from sources import AI_FILTER_SOURCES, domain_entity, fetch_all, fetch_article_text  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -54,7 +54,7 @@ NOT_AI_SPECIFIC = {"google", "apple", "amazon", "microsoft", "meta", "tesla", "s
                    "mark-zuckerberg", "sundar-pichai", "satya-nadella"}
 AI_CONCEPTS = {"ai-agents", "reasoning-models", "open-weight-models", "rag", "agi-superintelligence",
                "ai-safety-alignment", "coding-agents", "video-generation", "on-device-ai",
-               "local-llm-inference-offloading", "ai-chips", "china-ai"}
+               "local-llm-inference-offloading", "ai-chips", "china-ai", "trending-repos"}
 
 
 def boost(s):
@@ -141,7 +141,8 @@ def enrich_orphans(stories, mentions, rec, min_points=50, max_fetch=12):
               f"attached entities to {rescued}")
 
 
-def build_view(v, stories, mentions, rec, now, hist, breaking, stamp):
+def build_view(v, stories, mentions, rec, now, hist, breaking, stamp, repo_meta=None):
+    repo_meta = repo_meta or {}
     heat, heat_prev = defaultdict(float), defaultdict(float)
     count, by_source, ent_stories = defaultdict(int), defaultdict(lambda: defaultdict(int)), defaultdict(list)
     first_mention, pair = {}, defaultdict(float)
@@ -174,7 +175,7 @@ def build_view(v, stories, mentions, rec, now, hist, breaking, stamp):
                 pair[(el[i], el[j])] += contrib
 
     cands = [e for e in heat if count[e] >= v["min_stories"]
-             or rec.ents[e]["type"] == "Open source" and heat[e] > 1.5 or e in breaking]
+             or rec.ents[e]["type"] == "Open source" and heat[e] > 1.5 or e in breaking or e in repo_meta]
     cands.sort(key=lambda e: -heat[e])
     nodes_set = set(cands[: v["max_nodes"]])
 
@@ -193,12 +194,15 @@ def build_view(v, stories, mentions, rec, now, hist, breaking, stamp):
         trend = (heat[e] / prev) if prev > 0.05 else (9.9 if heat[e] > 0.5 else 1.0)
         status = "new" if is_new else ("rising" if trend >= 1.5 and heat[e] >= 1.0 else "steady")
         best = sorted(ent_stories[e], key=lambda x: -x[0])[:20]
+        rm = repo_meta.get(e)
         nodes.append(dict(
             id=e, label=info["label"], type=info["type"], parent=info["parent"],
             heat=round(heat[e], 3), heat_norm=round(heat[e] / top, 4), trend=round(min(trend, 9.9), 2),
             status=status, breaking=breaking.get(e), stories=count[e], first_seen=hist["entities"][e]["first_seen"],
             sources=dict(sorted(by_source[e].items(), key=lambda x: -x[1])),
             series=hist["entities"][e]["series"][-24:],
+            **({"star_series": rm["series"], "star_growth": {"d1": rm["d1"], "d7": rm["d7"], "pct7": rm["pct7"]},
+                "surging": rm["surging"]} if rm else {}),
             top_stories=[dict(title=s["title"], url=s["url"], source=s["source"], published=iso(s["published"]),
                               kind=s.get("kind"), discussion=s.get("discussion")) for _, s in best]))
 
@@ -298,6 +302,21 @@ def main():
             if mentions[s["id"]] & CHINA_AI:
                 mentions[s["id"]].add("china-ai")
 
+    # "Trending AI Repos" lane: each trending repo already became its own "Open source" node (via
+    # gh_repo in rec.find). Route it to the "Trending repos" hub concept so they cluster, and stash
+    # its star velocity + 30-day series (keyed by the repo node id) to attach to the node in build_view.
+    repo_meta = {}
+    for s in stories:
+        if s.get("source") != "Trending AI Repos":
+            continue
+        name = (s.get("gh_repo") or "").split("/", 1)[-1]
+        eid = slug(name)
+        repo_meta[eid] = dict(series=s.get("star_series") or [], d1=s.get("star_delta_1d"),
+                              d7=s.get("star_delta_7d"), pct7=s.get("star_pct_7d"),
+                              surging=bool(s.get("surging")))
+        if "trending-repos" in rec.ents:
+            mentions[s["id"]].add("trending-repos")
+
     # "AI-specific" entity: not just a big-tech name ("Apple"/"Amazon") or a generic concept.
     def ai_specific(e):
         return e not in NOT_AI_SPECIFIC and rec.ents[e]["type"] != "Concept" or e in AI_CONCEPTS
@@ -322,7 +341,7 @@ def main():
     stamp = iso(now)
     os.makedirs(DATA_DIR, exist_ok=True)
     for v in VIEWS:
-        build_view(v, stories, mentions, rec, now, hist, breaking, stamp)
+        build_view(v, stories, mentions, rec, now, hist, breaking, stamp, repo_meta)
     hist["runs"] = (hist["runs"] + [stamp])[-200:]
     json.dump(hist, open(HISTORY, "w"))
 

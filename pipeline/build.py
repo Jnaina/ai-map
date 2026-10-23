@@ -29,7 +29,7 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(__file__))
 import articles_db  # noqa: E402
-from entities import AI_RX, Recogniser, llm_disambiguate, llm_extract  # noqa: E402
+from entities import AI_RX, CHINA_AI, Recogniser, llm_disambiguate, llm_extract  # noqa: E402
 from sources import AI_FILTER_SOURCES, domain_entity, fetch_all, fetch_article_text  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -54,7 +54,7 @@ NOT_AI_SPECIFIC = {"google", "apple", "amazon", "microsoft", "meta", "tesla", "s
                    "mark-zuckerberg", "sundar-pichai", "satya-nadella"}
 AI_CONCEPTS = {"ai-agents", "reasoning-models", "open-weight-models", "rag", "agi-superintelligence",
                "ai-safety-alignment", "coding-agents", "video-generation", "on-device-ai",
-               "local-llm-inference-offloading", "ai-chips"}
+               "local-llm-inference-offloading", "ai-chips", "china-ai"}
 
 
 def boost(s):
@@ -289,6 +289,14 @@ def main():
         llm_disambiguate(stories, mentions, rec)
     except Exception as e:
         print(f"[disambiguate] skipped: {e}")
+
+    # Route every story that mentions a Chinese AI entity (company/lab/chipmaker/model) to the
+    # "China AI" concept node, even when the text never says "China" — e.g. "DeepSeek releases V4".
+    # Runs after disambiguation so a vetoed match (e.g. "Ascend") does not pull a story in.
+    if "china-ai" in rec.ents:
+        for s in stories:
+            if mentions[s["id"]] & CHINA_AI:
+                mentions[s["id"]].add("china-ai")
 
     # "AI-specific" entity: not just a big-tech name ("Apple"/"Amazon") or a generic concept.
     def ai_specific(e):

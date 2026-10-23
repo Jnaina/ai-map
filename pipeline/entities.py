@@ -41,6 +41,15 @@ SEED = [
     ("Tencent", "Company", ["Tencent"], None),
     ("Baidu", "Company", ["Baidu"], None),
     ("Huawei", "Company", ["Huawei"], None),
+    # Chinese AI labs & chipmakers (all routed to the "China AI" concept via CHINA_AI below)
+    ("01.AI", "Company", ["01\\.AI", "Zero One", "01 AI"], None),
+    ("SenseTime", "Company", ["SenseTime"], None),
+    ("Baichuan", "Company", ["Baichuan"], None),
+    ("StepFun", "Company", ["StepFun", "Step[- ]?\\d"], None),
+    ("iFlytek", "Company", ["iFlytek", "iFLYTEK"], None),
+    ("Biren", "Company", ["Biren"], None),               # Chinese GPU maker
+    ("Moore Threads", "Company", ["Moore Threads"], None),  # Chinese GPU maker
+    ("Cambricon", "Company", ["Cambricon"], None),       # Chinese AI-chip maker
     ("Samsung", "Company", ["Samsung"], None),
     ("TSMC", "Company", ["TSMC"], None),
     ("SK hynix", "Company", ["SK hynix", "SK Hynix"], None),
@@ -217,6 +226,12 @@ SEED = [
     ("Local LLM inference/offloading", "Concept", ["(?:CPU|GPU|NVMe|SSD|disk|memory|weight|layer|model|expert)[- ]offload(?:ing)?", "KV[- ]?cache offload(?:ing)?", "offload(?:ing)? to (?:CPU|RAM|NVMe|SSD|disk)", "inference optimi[sz]ation", "run(?:ning)? (?:large|massive|huge) (?:LLMs?|models?) (?:locally|on consumer)", "consumer[- ]grade GPUs?", "quantiz(?:ed|ation) inference"], None),
     ("AI funding", "Concept", ["raises \\$", "funding round", "valuation", "Series [A-F]"], None),
     ("Jobs & AI", "Concept", ["layoffs", "jobs", "workforce"], None),
+    # China's AI scene: matched by phrasing here, AND routed from any Chinese AI entity (CHINA_AI below).
+    ("China AI", "Concept", ["Chinese AI", "China AI", "China'?s AI",
+                             "Chinese (?:open[- ]weights?|open[- ]source|LLMs?|models?|labs?|startups?|chipmakers?|"
+                             "chips?|GPUs?|silicon|accelerators?|foundation models?)",
+                             "China'?s (?:open[- ]weights?|AI (?:models?|labs?|chips?|ambitions?|race)|chip|GPU)",
+                             "made in China AI"], None),
 ]
 
 # Versioned model-name discovery: (regex, family-prefix normaliser, parent)
@@ -452,6 +467,14 @@ AMBIGUOUS_ENTITIES = {
     "browser-use": ("browser-use, the open-source Python library/agent that lets an LLM control a web "
                     "browser (an AI 'browser agent') — NOT the generic phrase 'browser use' meaning how "
                     "people use web browsers, nor browser usage statistics/market share"),
+}
+
+# Chinese AI entities (companies, labs, chipmakers + their models) -> any story mentioning one is
+# also routed to the "China AI" concept node in build.py, even when the text never says "China".
+CHINA_AI = {
+    "deepseek", "alibaba-qwen", "moonshot-ai", "zhipu-ai", "minimax", "bytedance", "tencent", "baidu",
+    "huawei", "01-ai", "sensetime", "baichuan", "stepfun", "iflytek", "biren", "moore-threads",
+    "cambricon", "qwen", "kimi", "glm", "huawei-ascend", "liang-wenfeng",
 }
 
 

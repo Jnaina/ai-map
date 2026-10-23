@@ -30,7 +30,7 @@ from datetime import datetime, timezone
 sys.path.insert(0, os.path.dirname(__file__))
 import articles_db  # noqa: E402
 from entities import AI_RX, Recogniser, llm_disambiguate, llm_extract  # noqa: E402
-from sources import AI_FILTER_SOURCES, fetch_all  # noqa: E402
+from sources import AI_FILTER_SOURCES, domain_entity, fetch_all  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT, "web", "data")
@@ -227,6 +227,15 @@ def main():
 
     rec = Recogniser()
     mentions = {s["id"]: rec.find(s) for s in stories}
+
+    # A link to a company's own site attributes the story to that company's node, even when the
+    # headline never names the company (e.g. an Anthropic research post, on the Anthropic feed OR
+    # submitted to Hacker News, titled "LLMs are making formal verification feasible"). Keeps such
+    # posts from being orphaned (archived but off the map).
+    for s in stories:
+        owner = domain_entity(s.get("url"))
+        if owner and owner in rec.ents:
+            mentions[s["id"]].add(owner)
 
     # Ambiguous dictionary names (e.g. "Strata" the AI engine vs the common word): ask the LLM to
     # confirm, from each story's content, that the match is really the AI project — before the match

@@ -257,6 +257,40 @@ GITHUB_RELEASE_FEEDS = {
     "mem0 (releases)": "mem0",
 }
 
+# A story whose link points at a company's own site is that company's content, so attribute it to
+# that company's node even when the headline never names the company (e.g. an Anthropic research
+# post titled "LLMs are making formal verification feasible" matches no entity by text). This keys
+# off the LINK domain, so it also catches a Hacker News submission of the same URL — not just the
+# company's RSS feed. build.py adds the owner to each story's mentions after dictionary extraction;
+# matching is suffix-based (covers subdomains), only slugs in the entity dictionary take effect, and
+# the AI-relevance gate still applies. Keep domains unambiguous to a single entity (so not google.com).
+DOMAIN_ENTITY = {
+    "anthropic.com": "anthropic",
+    "openai.com": "openai",
+    "deepmind.google": "google-deepmind",
+    "blog.google": "google", "ai.google": "google", "research.google": "google",
+    "developers.googleblog.com": "google", "research.googleblog.com": "google",
+    "blogs.nvidia.com": "nvidia", "developer.nvidia.com": "nvidia",
+    "huggingface.co": "hugging-face",
+    "pytorch.org": "pytorch",
+    "ai.meta.com": "meta", "engineering.fb.com": "meta",
+    "aws.amazon.com": "amazon",
+    "machinelearning.apple.com": "apple",
+    "research.microsoft.com": "microsoft",
+}
+
+
+def domain_entity(url):
+    """Owning-company entity slug for a URL on a company's own site, else None (suffix match,
+    so a subdomain like www.anthropic.com still resolves). See DOMAIN_ENTITY."""
+    net = urllib.parse.urlparse(url or "").netloc.lower()
+    if net.startswith("www."):
+        net = net[4:]
+    for dom, ent in DOMAIN_ENTITY.items():
+        if net == dom or net.endswith("." + dom):
+            return ent
+    return None
+
 GITHUB_TOPICS = ["llm", "ai-agents", "agents", "generative-ai", "mcp", "large-language-models", "rag", "ai",
                  # inference-optimisation / local-LLM discovery: surface the next ktransformers/PowerInfer
                  "llm-inference", "inference", "llm-serving", "quantization", "local-llm", "on-device-ai", "gguf"]

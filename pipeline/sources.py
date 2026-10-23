@@ -296,13 +296,13 @@ GITHUB_TOPICS = ["llm", "ai-agents", "agents", "generative-ai", "mcp", "large-la
                  "llm-inference", "inference", "llm-serving", "quantization", "local-llm", "on-device-ai", "gguf"]
 
 
-def _get(url, headers=None, impersonate=False):
+def _get(url, headers=None, impersonate=False, timeout=TIMEOUT):
     if impersonate and _cffi is not None:
-        r = _cffi.get(url, impersonate="chrome", timeout=TIMEOUT, headers=headers or None)
+        r = _cffi.get(url, impersonate="chrome", timeout=timeout, headers=headers or None)
         r.raise_for_status()  # a challenge/error (e.g. 429/403) raises -> caller logs & skips
         return r.content
     req = urllib.request.Request(url, headers={**UA, **(headers or {})})
-    with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+    with urllib.request.urlopen(req, timeout=timeout) as r:
         data = r.read()
         if r.headers.get("Content-Encoding") == "gzip" or data[:2] == b"\x1f\x8b":
             import gzip
@@ -314,6 +314,22 @@ def _clean(html):
     txt = re.sub(r"<[^>]+>", " ", html or "")
     txt = re.sub(r"&[#a-z0-9]+;", " ", txt)
     return re.sub(r"\s+", " ", txt).strip()
+
+
+def fetch_article_text(url, log=print, max_chars=8000, timeout=10):
+    """Fetch an article page and return its cleaned body text (truncated). Returns None on fetch
+    failure (retryable) and "" when the page yields no text. Used to rescue high-engagement HN
+    stories whose headline names no entity but whose body does (see build.py body enrichment).
+    Uses a short timeout: enrichment runs on the 2-minute refresh, so a slow page must not stall it."""
+    try:
+        raw = _get(url, timeout=timeout)
+        html = raw.decode("utf-8", "ignore") if isinstance(raw, (bytes, bytearray)) else str(raw)
+    except Exception as e:
+        log(f"  ! body {url[:50]}: {str(e)[:50]}")
+        return None
+    # Drop script/style/noscript blocks so their contents don't pollute entity matching.
+    html = re.sub(r"(?is)<(script|style|noscript)[^>]*>.*?</\1>", " ", html)
+    return _clean(html)[:max_chars]
 
 
 def _parse_date(s):

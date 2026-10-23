@@ -1,4 +1,5 @@
 data/stories-cache.json
+data/body-cache.json
 logs/
 .DS_Store
 __pycache__/

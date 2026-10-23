@@ -30,12 +30,13 @@ from datetime import datetime, timezone
 sys.path.insert(0, os.path.dirname(__file__))
 import articles_db  # noqa: E402
 from entities import AI_RX, Recogniser, llm_disambiguate, llm_extract  # noqa: E402
-from sources import AI_FILTER_SOURCES, domain_entity, fetch_all  # noqa: E402
+from sources import AI_FILTER_SOURCES, domain_entity, fetch_all, fetch_article_text  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT, "web", "data")
 HISTORY = os.path.join(ROOT, "data", "history.json")
 CACHE = os.path.join(ROOT, "data", "stories-cache.json")
+BODY_CACHE = os.path.join(ROOT, "data", "body-cache.json")
 
 VIEWS = [
     dict(name="week", out="data.json", window_h=7 * 24, half_life=24.0, trend_lag=24.0, max_nodes=140, min_stories=2),
@@ -96,6 +97,48 @@ def breaking_stats(stories, mentions, now):
         if recent_n[e] >= BREAK_MIN_STORIES and rw >= BREAK_MIN_WEIGHT and rw >= BREAK_RATIO * max(prev_w[e], 0.4):
             flags[e] = dict(last6h=recent_n[e], ratio=round(rw / max(prev_w[e], 0.4), 1))
     return flags
+
+
+def enrich_orphans(stories, mentions, rec, min_points=50, max_fetch=12):
+    """Rescue high-engagement Hacker News stories whose headline names no entity but whose article
+    body does (e.g. a model-comparison post titled "Every AI model has the same take" that discusses
+    GPT, Gemini, Grok, ... in the body). For each such orphan above `min_points`, fetch the article
+    once, cache its body text, and re-run entity extraction on it every build (cheap, no network on a
+    cache hit) so body matches still flow through disambiguation and the AI-relevance gate. Keeps the
+    pipeline title-only for everything else. Best-effort; never breaks the build."""
+    try:
+        cache = json.load(open(BODY_CACHE))
+    except Exception:
+        cache = {}
+    now, fetched, rescued = time.time(), 0, 0
+    for s in stories:
+        sid = s["id"]
+        if s.get("kind") != "discussion" or mentions.get(sid) or (s.get("engagement") or 0) < min_points:
+            continue
+        url = s.get("url") or ""
+        if not url or "news.ycombinator.com" in url:
+            continue
+        ent, text = cache.get(sid), None
+        if ent and ent.get("text") is not None:
+            text = ent["text"]                                  # cache hit (fetched before)
+        elif ent and not ent.get("ok", True) and now - ent.get("ts", 0) < 6 * 3600:
+            continue                                            # recent fetch failure: back off
+        elif fetched < max_fetch:
+            text = fetch_article_text(url)
+            fetched += 1
+            cache[sid] = {"text": text, "ts": now} if text is not None else {"ok": False, "ts": now}
+        if text:
+            extra = rec.find({"id": sid, "text": text, "title": s.get("title", "")})
+            if extra:
+                mentions[sid] |= extra
+                rescued += 1
+    try:
+        json.dump(cache, open(BODY_CACHE, "w"))
+    except Exception as ex:
+        print(f"  ! body-cache write: {str(ex)[:60]}")
+    if fetched or rescued:
+        print(f"Body enrichment: fetched {fetched} orphan article(s) (>= {min_points} pts), "
+              f"attached entities to {rescued}")
 
 
 def build_view(v, stories, mentions, rec, now, hist, breaking, stamp):
@@ -236,6 +279,8 @@ def main():
         owner = domain_entity(s.get("url"))
         if owner and owner in rec.ents:
             mentions[s["id"]].add(owner)
+
+    enrich_orphans(stories, mentions, rec)
 
     # Ambiguous dictionary names (e.g. "Strata" the AI engine vs the common word): ask the LLM to
     # confirm, from each story's content, that the match is really the AI project — before the match

@@ -173,6 +173,7 @@ RSS_FEEDS = [
     ("TensorRT-LLM (releases)", "https://github.com/NVIDIA/TensorRT-LLM/releases.atom", 0.7),
     ("Strata (releases)", "https://github.com/niko1221/strata/releases.atom", 0.8),
     ("Project Maya (releases)", "https://github.com/mw00/project-maya/releases.atom", 0.8),
+    ("OpenShell (releases)", "https://github.com/NVIDIA/OpenShell/releases.atom", 0.8),  # NVIDIA autonomous-agent runtime
 ]
 
 # Feeds that are NOT AI-only (general tech/research/news). Stories from these are kept only
@@ -236,6 +237,7 @@ GITHUB_RELEASE_FEEDS = {
     "TensorRT-LLM (releases)": "TensorRT-LLM",
     "Strata (releases)": "Strata",
     "Project Maya (releases)": "Project Maya",
+    "OpenShell (releases)": "OpenShell",
 }
 
 GITHUB_TOPICS = ["llm", "ai-agents", "agents", "generative-ai", "mcp", "large-language-models", "rag", "ai",

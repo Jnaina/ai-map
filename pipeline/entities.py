@@ -146,6 +146,7 @@ SEED = [
     ("TensorRT-LLM", "Open source", ["TensorRT-LLM", "TensorRT LLM"], "NVIDIA"),
     ("Strata", "Open source", ["Strata"], None),
     ("Project Maya", "Open source", ["Project Maya", "project-maya"], None),
+    ("OpenShell", "Open source", ["OpenShell"], "NVIDIA"),  # NVIDIA autonomous-agent runtime (disambiguated)
     # --- hardware
     ("Blackwell GPUs", "Hardware", ["Blackwell", "B200", "B300", "GB200", "GB300"], "NVIDIA"),
     ("Rubin GPUs", "Hardware", ["Rubin", "Vera Rubin"], "NVIDIA"),
@@ -398,6 +399,9 @@ AMBIGUOUS_ENTITIES = {
                "Chinese internet portal/media company"),
     "huawei-ascend": ("Huawei Ascend, Huawei's line of AI accelerator chips (e.g. Ascend 910) used for AI "
                       "training/inference — NOT the common verb 'ascend', nor unrelated products named Ascend"),
+    "openshell": ("OpenShell, NVIDIA's open-source safe/private runtime for autonomous AI agents — NOT "
+                  "Open-Shell / OpenShell the Windows Start-menu replacement (Classic Shell successor), "
+                  "and NOT any generic shell/terminal tool"),
 }
 
 

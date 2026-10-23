@@ -50,6 +50,50 @@ SEED = [
     ("Biren", "Company", ["Biren"], None),               # Chinese GPU maker
     ("Moore Threads", "Company", ["Moore Threads"], None),  # Chinese GPU maker
     ("Cambricon", "Company", ["Cambricon"], None),       # Chinese AI-chip maker
+    # More Chinese AI companies (reviewed list; all routed to "China AI" via CHINA_AI). Single-word
+    # names that collide with common words (Momenta/Terminus/Enflame/TRS) are LLM-disambiguated.
+    ("MetaX", "Company", ["MetaX"], None),
+    ("Horizon Robotics", "Company", ["Horizon Robotics"], None),
+    ("VeriSilicon", "Company", ["VeriSilicon"], None),
+    ("Rockchip", "Company", ["Rockchip"], None),
+    ("Pony.ai", "Company", ["Pony\\.ai", "Pony AI"], None),
+    ("XtalPi", "Company", ["XtalPi"], None),
+    ("Iluvatar CoreX", "Company", ["Iluvatar CoreX", "Iluvatar"], None),
+    ("DiDi Autonomous Driving", "Company", ["DiDi Autonomous Driving"], None),
+    ("Orbbec", "Company", ["Orbbec"], None),
+    ("INTSIG", "Company", ["INTSIG"], None),
+    ("Intellifusion", "Company", ["Intellifusion"], None),
+    ("SigmaStar", "Company", ["SigmaStar"], None),
+    ("Mininglamp", "Company", ["Mininglamp"], None),
+    ("Momenta", "Company", ["Momenta"], None),
+    ("Terminus", "Company", ["Terminus"], None),
+    ("Insilico Medicine", "Company", ["Insilico Medicine", "Insilico"], None),
+    ("WeRide", "Company", ["WeRide"], None),
+    ("4Paradigm", "Company", ["4Paradigm"], None),
+    ("ArcSoft", "Company", ["ArcSoft"], None),
+    ("Enflame", "Company", ["Enflame"], None),
+    ("Unisound", "Company", ["Unisound"], None),
+    ("Megvii", "Company", ["Megvii"], None),
+    ("DEEPEXI", "Company", ["DEEPEXI"], None),
+    ("TRS", "Company", ["TRS"], None),
+    ("Zhongguancun Kejin", "Company", ["Zhongguancun Kejin"], None),
+    ("CloudWalk", "Company", ["CloudWalk"], None),
+    ("Wondershare", "Company", ["Wondershare"], None),
+    ("QuantGroup", "Company", ["QuantGroup"], None),
+    ("Kunlunxin", "Company", ["Kunlunxin"], None),
+    ("PCI Technology", "Company", ["PCI Technology", "Jiadu"], None),
+    ("Neolix", "Company", ["Neolix"], None),
+    ("Black Sesame Technologies", "Company", ["Black Sesame Technologies"], None),
+    ("Inceptio Technology", "Company", ["Inceptio Technology", "Inceptio"], None),
+    ("MEGAROBO", "Company", ["MEGAROBO"], None),
+    ("DeepRoute.ai", "Company", ["DeepRoute\\.ai", "DeepRoute"], None),
+    ("United Imaging Intelligence", "Company", ["United Imaging Intelligence", "United Imaging"], None),
+    ("Vastai Technologies", "Company", ["Vastai Technologies", "Vastai"], None),
+    ("Xiaoice", "Company", ["Xiaoice"], None),
+    ("XVERSE", "Company", ["XVERSE"], None),
+    ("Zelostech", "Company", ["Zelostech", "Jiushi Intelligence"], None),
+    ("Axera", "Company", ["Axera"], None),
+    ("Tongdun Technology", "Company", ["Tongdun Technology", "Tongdun"], None),
     ("Samsung", "Company", ["Samsung"], None),
     ("TSMC", "Company", ["TSMC"], None),
     ("SK hynix", "Company", ["SK hynix", "SK Hynix"], None),
@@ -467,6 +511,15 @@ AMBIGUOUS_ENTITIES = {
     "browser-use": ("browser-use, the open-source Python library/agent that lets an LLM control a web "
                     "browser (an AI 'browser agent') — NOT the generic phrase 'browser use' meaning how "
                     "people use web browsers, nor browser usage statistics/market share"),
+    "momenta": ("Momenta, a Chinese autonomous-driving (self-driving) company — NOT the physics / "
+                "machine-learning term 'momenta' (plural of momentum, e.g. optimizer momenta)"),
+    "terminus": ("Terminus (Terminus Group), a Chinese AI-of-Things / smart-city company — NOT the "
+                 "ordinary word 'terminus' (an endpoint or end of a line/route), nor a software project "
+                 "or package named Terminus"),
+    "enflame": ("Enflame, a Chinese AI-chip / GPGPU accelerator startup — NOT the verb "
+                "'enflame' / 'inflame' (to set alight or provoke)"),
+    "trs": ("TRS (Beijing TRS Information Technology), a Chinese AI / big-data NLP company — NOT the "
+            "TRS-80 computer, a TRS audio jack/connector, or a total return swap in finance"),
 }
 
 # Chinese AI entities (companies, labs, chipmakers + their models) -> any story mentioning one is
@@ -475,6 +528,14 @@ CHINA_AI = {
     "deepseek", "alibaba-qwen", "moonshot-ai", "zhipu-ai", "minimax", "bytedance", "tencent", "baidu",
     "huawei", "01-ai", "sensetime", "baichuan", "stepfun", "iflytek", "biren", "moore-threads",
     "cambricon", "qwen", "kimi", "glm", "huawei-ascend", "liang-wenfeng",
+    # reviewed list (column J)
+    "metax", "horizon-robotics", "verisilicon", "rockchip", "pony-ai", "xtalpi", "iluvatar-corex",
+    "didi-autonomous-driving", "orbbec", "intsig", "intellifusion", "sigmastar", "mininglamp",
+    "momenta", "terminus", "insilico-medicine", "weride", "4paradigm", "arcsoft", "enflame",
+    "unisound", "megvii", "deepexi", "trs", "zhongguancun-kejin", "cloudwalk", "wondershare",
+    "quantgroup", "kunlunxin", "pci-technology", "neolix", "black-sesame-technologies",
+    "inceptio-technology", "megarobo", "deeproute-ai", "united-imaging-intelligence",
+    "vastai-technologies", "xiaoice", "xverse", "zelostech", "axera", "tongdun-technology",
 }
 
 

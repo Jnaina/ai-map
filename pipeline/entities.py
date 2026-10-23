@@ -238,6 +238,21 @@ MODEL_PATTERNS = [
     (r"\bNemotron[- ]\w+\b", "NVIDIA"),
 ]
 
+# Bare Claude model names written WITHOUT the "Claude " prefix: "Opus 4.1", "Sonnet 4.5",
+# "Haiku 4.5", "Fable 5.1". Each collides with a common word (the Opus audio codec, a sonnet poem,
+# Haiku the OS / haiku poetry, the game Fable), so a match is AMBIGUOUS: the model node is added
+# immediately, but its company/family attribution (Anthropic / Claude) is WITHHELD until
+# llm_disambiguate confirms, per story, that the story is really about the Claude model — so a false
+# match leaks nothing. The node is normalised to the "Claude <name>" id so bare and prefixed forms
+# share one node. A version digit is required, so "a sonnet" / "haiku poetry" never match.
+# Tuple: (regex, company-parent-label, family-entity-id, disambiguation description).
+AMBIGUOUS_MODEL_PATTERNS = [
+    (r"\b(?:Opus|Sonnet|Haiku|Fable) ?\d(?:\.\d)?\b", "Anthropic", "claude",
+     "a Claude large language model from Anthropic (Claude Opus / Sonnet / Haiku / Fable, e.g. "
+     "'Opus 4.1', 'Sonnet 4.5', 'Fable 5.1') — NOT the Opus audio codec, a Shakespearean sonnet or "
+     "other poem, the Haiku operating system or haiku poetry, or the video game Fable"),
+]
+
 # first word of a discovered model name -> family entity id
 FAMILY = {"gpt": "gpt", "claude": "claude", "gemini": "gemini", "gemma": "gemma", "veo": "veo", "llama": "llama",
           "qwen": "qwen", "grok": "grok", "kimi": "kimi", "glm": "glm", "sora": "sora", "nemotron": "nemotron",
@@ -284,6 +299,8 @@ class Recogniser:
             pat = r"(?<![\w.-])(?:" + "|".join(aliases) + r")(?![\w-])"
             self.rx.append((re.compile(pat, flags), eid))
         self.model_rx = [(re.compile(p), slug(parent)) for p, parent in MODEL_PATTERNS]
+        self.amb_model_rx = [(re.compile(p), slug(par), fam, desc) for p, par, fam, desc in AMBIGUOUS_MODEL_PATTERNS]
+        self.ambiguous_hits = {}  # story id -> {eid: {"parent","family","desc"}} for bare-model matches
 
     def _ensure(self, label, typ, parent=None, seed=False):
         eid = slug(label)
@@ -304,6 +321,20 @@ class Recogniser:
                 fam = FAMILY.get(re.match(r"[A-Za-z]+", name).group(0).lower())
                 if fam:
                     found.add(fam)
+        # Bare Claude model names ("Opus 4.1"): add the node now, but defer the company/family
+        # attribution to llm_disambiguate (see AMBIGUOUS_MODEL_PATTERNS). Skip any that already
+        # matched in full "Claude <name>" form in this same story (then it's not ambiguous).
+        unambiguous = set(found)
+        sid = story.get("id")
+        for rx, parent, fam, desc in self.amb_model_rx:
+            for m in rx.finditer(text):
+                name = re.sub(r"\s+", " ", m.group(0)).strip()
+                eid = self._ensure("Claude " + name, "Model", parent)
+                if eid in unambiguous:
+                    continue
+                found.add(eid)
+                if sid is not None:
+                    self.ambiguous_hits.setdefault(sid, {})[eid] = {"parent": parent, "family": fam, "desc": desc}
         if story.get("hf_model"):
             org, name = story["hf_model"].split("/", 1)
             clean = re.sub(r"[-_.](?:GGUF|AWQ|GPTQ|FP8|FP4|NVFP4|MLX|bnb|4bit|8bit|i1|int4|int8|Q\d\w*)\b.*$", "", name, flags=re.I)
@@ -317,8 +348,12 @@ class Recogniser:
             found.add(self._ensure(name, "Open source", slug(parent) if parent else None))
             if parent:
                 found.add(slug(parent))
-        # a versioned model implies its family/company is discussed
+        # a versioned model implies its family/company is discussed (except bare ambiguous matches,
+        # whose parent is withheld until llm_disambiguate confirms them for this story)
+        amb = self.ambiguous_hits.get(sid, {}) if sid is not None else {}
         for eid in list(found):
+            if eid in amb:
+                continue
             p = self.ents[eid].get("parent")
             if p and self.ents[eid]["type"] in ("Model",) and not self.ents[eid]["seed"]:
                 found.add(p)
@@ -425,9 +460,17 @@ def llm_disambiguate(stories, mentions, rec, log=print, batch=20):
     dictionary matched is actually about the AI project, and drop the match if not. Decisions are cached
     per (entity, story). A story from the project's own '(releases)' feed is taken as real without asking.
     If the LLM is unavailable, matches are left as-is (the plain dictionary behaviour)."""
+    # Two kinds of ambiguous match: static dictionary names (AMBIGUOUS_ENTITIES, keyed by eid) and
+    # dynamic bare-model hits recorded per story (rec.ambiguous_hits). Both are confirmed the same
+    # way; they differ only in what a verdict does (see the apply loop below).
+    amb_hits = getattr(rec, "ambiguous_hits", {})
     pairs = [(eid, sid) for sid, ents in mentions.items() for eid in list(ents) if eid in AMBIGUOUS_ENTITIES]
+    pairs += [(eid, sid) for sid, d in amb_hits.items() for eid in d if eid in mentions.get(sid, ())]
     if not pairs:
         return 0
+
+    def _desc(eid, sid):
+        return AMBIGUOUS_ENTITIES[eid] if eid in AMBIGUOUS_ENTITIES else amb_hits[sid][eid]["desc"]
     by_id = {s["id"]: s for s in stories}
     cache_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "llm-disambig-cache.json")
     try:
@@ -457,7 +500,7 @@ def llm_disambiguate(stories, mentions, rec, log=print, batch=20):
             for j, (eid, sid) in enumerate(chunk):
                 s = by_id[sid]
                 snippet = (s.get("text") or s.get("title") or "")[:300]
-                lines.append(f"{j}. PROJECT: {AMBIGUOUS_ENTITIES[eid]}\n   STORY: {snippet}")
+                lines.append(f"{j}. PROJECT: {_desc(eid, sid)}\n   STORY: {snippet}")
             prompt = ("For each numbered item, decide from the STORY's content whether it is really about the "
                       "named PROJECT. Reply ONLY with JSON: "
                       '{"items":[{"i":<number>,"match":true|false}]}\n\n' + "\n".join(lines))
@@ -479,9 +522,21 @@ def llm_disambiguate(stories, mentions, rec, log=print, batch=20):
 
     dropped = 0
     for eid, sid in pairs:
-        if cache.get(ck(eid, sid)) is False:
+        decided = cache.get(ck(eid, sid))
+        dyn = sid in amb_hits and eid in amb_hits[sid]
+        if decided is False:
+            # false match -> drop the node. For a dynamic model match no company/family was ever
+            # added, so dropping the node leaks nothing.
             mentions[sid].discard(eid)
             dropped += 1
+        elif dyn:
+            # confirmed, or undecided because the LLM was unavailable -> now attribute the bare
+            # model to its company + family (withheld in find() until this point).
+            info = amb_hits[sid][eid]
+            if info["parent"] in rec.ents:
+                mentions[sid].add(info["parent"])
+            if info["family"] and info["family"] in rec.ents:
+                mentions[sid].add(info["family"])
     try:
         json.dump(cache, open(cache_path, "w"))
     except Exception as ex:

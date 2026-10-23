@@ -174,6 +174,15 @@ RSS_FEEDS = [
     ("Strata (releases)", "https://github.com/niko1221/strata/releases.atom", 0.8),
     ("Project Maya (releases)", "https://github.com/mw00/project-maya/releases.atom", 0.8),
     ("OpenShell (releases)", "https://github.com/NVIDIA/OpenShell/releases.atom", 0.8),  # NVIDIA autonomous-agent runtime
+    # AI agent frameworks / runtimes — releases.atom (trusted, AI-only; name prefixed per GITHUB_RELEASE_FEEDS).
+    ("AutoGPT (releases)", "https://github.com/Significant-Gravitas/AutoGPT/releases.atom", 0.8),
+    ("AutoGen (releases)", "https://github.com/microsoft/autogen/releases.atom", 0.8),
+    ("CrewAI (releases)", "https://github.com/crewAIInc/crewAI/releases.atom", 0.8),
+    ("MetaGPT (releases)", "https://github.com/FoundationAgents/MetaGPT/releases.atom", 0.8),
+    ("OpenHands (releases)", "https://github.com/OpenHands/OpenHands/releases.atom", 0.8),
+    ("Dify (releases)", "https://github.com/langgenius/dify/releases.atom", 0.8),
+    ("browser-use (releases)", "https://github.com/browser-use/browser-use/releases.atom", 0.8),
+    ("mem0 (releases)", "https://github.com/mem0ai/mem0/releases.atom", 0.8),
 ]
 
 # Feeds that are NOT AI-only (general tech/research/news). Stories from these are kept only
@@ -238,6 +247,14 @@ GITHUB_RELEASE_FEEDS = {
     "Strata (releases)": "Strata",
     "Project Maya (releases)": "Project Maya",
     "OpenShell (releases)": "OpenShell",
+    "AutoGPT (releases)": "AutoGPT",
+    "AutoGen (releases)": "AutoGen",
+    "CrewAI (releases)": "CrewAI",
+    "MetaGPT (releases)": "MetaGPT",
+    "OpenHands (releases)": "OpenHands",
+    "Dify (releases)": "Dify",
+    "browser-use (releases)": "browser-use",
+    "mem0 (releases)": "mem0",
 }
 
 GITHUB_TOPICS = ["llm", "ai-agents", "agents", "generative-ai", "mcp", "large-language-models", "rag", "ai",

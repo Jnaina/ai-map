@@ -192,7 +192,7 @@ def build_view(v, stories, mentions, rec, now, hist, breaking, stamp):
         prev = heat_prev[e]
         trend = (heat[e] / prev) if prev > 0.05 else (9.9 if heat[e] > 0.5 else 1.0)
         status = "new" if is_new else ("rising" if trend >= 1.5 and heat[e] >= 1.0 else "steady")
-        best = sorted(ent_stories[e], key=lambda x: -x[0])[:8]
+        best = sorted(ent_stories[e], key=lambda x: -x[0])[:20]
         nodes.append(dict(
             id=e, label=info["label"], type=info["type"], parent=info["parent"],
             heat=round(heat[e], 3), heat_norm=round(heat[e] / top, 4), trend=round(min(trend, 9.9), 2),

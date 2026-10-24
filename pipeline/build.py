@@ -193,7 +193,10 @@ def build_view(v, stories, mentions, rec, now, hist, breaking, stamp, repo_meta=
         prev = heat_prev[e]
         trend = (heat[e] / prev) if prev > 0.05 else (9.9 if heat[e] > 0.5 else 1.0)
         status = "new" if is_new else ("rising" if trend >= 1.5 and heat[e] >= 1.0 else "steady")
-        best = sorted(ent_stories[e], key=lambda x: -x[0])[:20]
+        # The Trending-repos hub aggregates every tracked repo, and more AI repos keep coming online
+        # and surging, so give it a deeper panel (50) than ordinary nodes (20).
+        cap = 50 if e == "trending-repos" else 20
+        best = sorted(ent_stories[e], key=lambda x: -x[0])[:cap]
         rm = repo_meta.get(e)
         nodes.append(dict(
             id=e, label=info["label"], type=info["type"], parent=info["parent"],

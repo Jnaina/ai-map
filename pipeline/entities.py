@@ -341,9 +341,10 @@ def slug(label):
 
 
 # Is a story about AI at all? (used to drop off-topic Hacker News items)
-AI_RX = re.compile(r"(?<![\w-])(?:AI|A\.I\.|AGI|LLMs?|GPTs?|genAI)(?![\w-])|"
+AI_RX = re.compile(r"(?<![\w-])(?:AI|A\.I\.|AGI|LLMs?|VLMs?|GPTs?|genAI)(?![\w-])|"
                    r"(?i:\b(?:artificial intelligence|machine learning|deep learning|neural|transformers?|chatbots?|"
-                   r"agentic|ai agents?|language models?|foundation models?|inference|fine-?tun\w*|embeddings?|"
+                   r"agentic|ai agents?|language models?|foundation models?|vision models?|vision[- ]language models?|"
+                   r"multimodal models?|inference|fine-?tun\w*|embeddings?|"
                    r"diffusion|prompts?|reasoning models?|open[- ]weights?|training runs?|copilot|gpus?|tokens?)\b)")
 GENERIC = {"llm", "llms", "ai", "gpu", "gpus", "cpu", "linux", "git", "rust", "python", "mac", "macos", "windows",
            "ios", "android", "vulkan", "esp32", "minecraft", "reddit", "trump", "ftc", "sec", "eu", "us", "china",

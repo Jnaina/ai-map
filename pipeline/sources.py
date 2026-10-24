@@ -308,6 +308,13 @@ TREND_PCT7_MIN_ABS = 100    #      but only when the absolute 7-day gain clears 
 TREND_MAX = 15              # hard cap on how many trending repos reach the map
 TREND_MAX_AVG_PER_DAY = 700 # star-farm guard: drop repos (older than 45 d) averaging more than this
 TREND_SNAPSHOT_DAYS = 35    # retention of the daily snapshot store (headroom over the 30-day series)
+# Repos behind our curated release feeds (Strata, Project Maya, vLLM, agent frameworks...). They are
+# seeded into the velocity pool regardless of topic tags / star floor, because some carry NO GitHub
+# topics (e.g. niko1221/strata: 31k* but topics=[]) so topic-search can't find them -- the OpenShell
+# blind spot. Seeding lets them get star-velocity tracking and surface in Trending repos when surging.
+RELEASE_FEED_REPOS = [re.search(r"github\.com/([^/]+/[^/]+?)/releases", u).group(1)
+                      for n, u, _w in RSS_FEEDS
+                      if n in GITHUB_RELEASE_FEEDS and re.search(r"github\.com/[^/]+/[^/]+?/releases", u)]
 
 
 def _load_star_snaps():
@@ -598,6 +605,24 @@ def fetch_trending_repos(since, log):
             if fn not in pool or st > pool[fn].get("stargazers_count", 0):
                 pool[fn] = r
         time.sleep(1.5 if tok else 7)  # unauthenticated search allows 10 requests/minute
+    # Seed the curated release-feed repos (bypassing topic/star gates) so topicless-but-popular repos
+    # like niko1221/strata still get velocity tracking. Uses the REST repos endpoint (core rate limit,
+    # separate from search). The star-farm guard is intentionally skipped here -- these are vetted.
+    seeded = 0
+    for fn in RELEASE_FEED_REPOS:
+        if fn in pool:
+            continue
+        try:
+            r = json.loads(_get(f"https://api.github.com/repos/{fn}", hdr))
+        except Exception as e:
+            log(f"  ! trending seed {fn}: {str(e)[:60]}")
+            continue
+        if r.get("full_name") and not r.get("archived"):
+            pool[r["full_name"]] = r
+            seeded += 1
+        time.sleep(0.3 if tok else 2)
+    if seeded:
+        log(f"  Trending AI repos: seeded {seeded} release-feed repo(s) into the pool")
     if not pool:
         log("  Trending AI repos: pool empty (API unreachable)")
         return []

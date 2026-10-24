@@ -54,7 +54,7 @@ NOT_AI_SPECIFIC = {"google", "apple", "amazon", "microsoft", "meta", "tesla", "s
                    "mark-zuckerberg", "sundar-pichai", "satya-nadella"}
 AI_CONCEPTS = {"ai-agents", "reasoning-models", "open-weight-models", "rag", "agi-superintelligence",
                "ai-safety-alignment", "coding-agents", "video-generation", "on-device-ai",
-               "local-llm-inference-offloading", "ai-chips", "china-ai", "trending-repos"}
+               "local-llm-inference-offloading", "ai-chips", "china-ai", "trending-repos", "agent-harness"}
 
 
 def boost(s):

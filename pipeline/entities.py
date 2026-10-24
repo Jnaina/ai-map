@@ -248,6 +248,10 @@ SEED = [
     # NB: no bare "agents" alias -- it matches law-enforcement/travel/insurance "agents" etc.
     # (e.g. "Border Patrol agents"). "agentic" and "AI agent(s)" are the unambiguous signals.
     ("AI agents", "Concept", ["AI agents?", "agentic", "autonomous agents?"], None),
+    # The scaffolding/runtime around an LLM that turns it into an agent (tool loops, context mgmt,
+    # eval harnesses). Specific aliases only -- bare "harness" matches test/safety/wiring harnesses.
+    ("Agent Harness", "Concept", ["agent harness(?:es)?", "agentic harness(?:es)?", "harness engineering",
+                                  "agent scaffold(?:ing|s)?", "agentic scaffold(?:ing|s)?", "LLM harness(?:es)?"], None),
     ("Reasoning models", "Concept", ["reasoning models?", "chain[- ]of[- ]thought"], None),
     ("Open-weight models", "Concept", ["open[- ]weights?", "open[- ]source models?"], None),
     ("RAG", "Concept", ["RAG", "retrieval[- ]augmented"], None),

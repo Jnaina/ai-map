@@ -28,6 +28,17 @@ function botReason(path, ua, asn) {
   return null;
 }
 
+// Owner self-exclusion: is this request the site owner debugging the app? Two signals,
+// either one is enough — a per-browser opt-out cookie (set by visiting ?self=1), or a
+// known owner IP listed in the OWNER_IPS env var (comma/space separated). Such rows are
+// still logged, but tagged bot='self' so the dashboard hides them by default (bot IS NULL)
+// while the raw log stays complete. The `self` tag is runtime-only (it depends on the
+// cookie / live IP, neither of which is stored), so backfill_bots.py never sets or clears it.
+function ipInList(ip, list) {
+  if (!ip || !list) return false;
+  return list.split(/[,\s]+/).some((x) => x && x === ip);
+}
+
 async function ipHash(ip, salt) {
   try {
     const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(salt + "|" + ip));
@@ -42,7 +53,8 @@ export async function onRequest(context) {
   const res = await next();
   try {
     if (!env.DB || request.method !== "GET") return res;
-    const p = new URL(request.url).pathname;
+    const url = new URL(request.url);
+    const p = url.pathname;
     // only page views (probes for missing paths are served the HTML shell, so they land here too)
     if (ASSET_RX.test(p) || p.startsWith("/api/") || p === "/stats.html" || p === "/stats") return res;
     const ct = res.headers.get("content-type") || "";
@@ -55,6 +67,21 @@ export async function onRequest(context) {
     const salt = (env.IP_SALT || "ai-map") + day;
     const ua = request.headers.get("user-agent") || null;
     const asn = cf.asOrganization || null;
+
+    // Owner self-exclusion. ?self=1 opts this browser out (sets a 1-year cookie); ?self=0 opts
+    // back in (clears it). Otherwise fall back to the cookie or the OWNER_IPS allowlist.
+    const toggle = url.searchParams.get("self");
+    const cookie = request.headers.get("cookie") || "";
+    let isSelf = /(?:^|;\s*)aimap_self=1(?:\s*;|$)/.test(cookie) || ipInList(ip, env.OWNER_IPS);
+    let setCookie = null;
+    if (toggle === "1") {
+      isSelf = true;
+      setCookie = "aimap_self=1; Path=/; Max-Age=31536000; SameSite=Lax";
+    } else if (toggle === "0") {
+      isSelf = false;
+      setCookie = "aimap_self=; Path=/; Max-Age=0; SameSite=Lax";
+    }
+    const reason = isSelf ? "self" : botReason(p, ua, asn);
 
     const task = (async () => {
       const iph = await ipHash(ip, salt);
@@ -73,11 +100,18 @@ export async function onRequest(context) {
           ua,
           request.headers.get("referer") || null,
           iph,
-          botReason(p, ua, asn)
+          reason
         )
         .run();
     })();
     waitUntil(task);
+
+    // If the opt-out was just toggled, set/clear the cookie on a mutable copy of the response.
+    if (setCookie) {
+      const r = new Response(res.body, res);
+      r.headers.append("Set-Cookie", setCookie);
+      return r;
+    }
   } catch (e) {
     /* never let analytics break the site */
   }

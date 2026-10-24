@@ -55,7 +55,10 @@ def d1(sql):
 def main():
     if not os.environ.get("CLOUDFLARE_API_TOKEN"):
         os.environ["CLOUDFLARE_API_TOKEN"] = open(os.path.join(os.path.dirname(__file__) or ".", ".cf_deploy_token")).read().strip()
-    where = "" if "--all" in sys.argv else " WHERE bot IS NULL"
+    # Never touch rows the live middleware tagged bot='self' (owner self-exclusion): that tag
+    # depends on a cookie / live IP we don't store, so it can't be recomputed here. Default run
+    # only fills untagged rows; --all re-tags everything EXCEPT the self rows.
+    where = " WHERE bot IS NULL" if "--all" not in sys.argv else " WHERE bot IS NULL OR bot <> 'self'"
     rows = d1(f"SELECT id, path, ua, asn FROM visits{where}")
     groups = {}
     for r in rows:

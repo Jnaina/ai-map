@@ -250,8 +250,9 @@ SEED = [
     ("AI agents", "Concept", ["AI agents?", "agentic", "autonomous agents?"], None),
     # The scaffolding/runtime around an LLM that turns it into an agent (tool loops, context mgmt,
     # eval harnesses). Specific aliases only -- bare "harness" matches test/safety/wiring harnesses.
-    ("Agent Harness", "Concept", ["agent harness(?:es)?", "agentic harness(?:es)?", "harness engineering",
-                                  "agent scaffold(?:ing|s)?", "agentic scaffold(?:ing|s)?", "LLM harness(?:es)?"], None),
+    ("Agent Harness", "Concept", ["agent harness(?:es|ing)?", "agentic harness(?:es|ing)?", "harness engineering",
+                                  "agent scaffold(?:ing|s)?", "agentic scaffold(?:ing|s)?", "LLM harness(?:es)?",
+                                  "Harness[2²]"], None),  # incl. Google's Harness2/Harness² product (no space -> skips "test harness 2.0")
     ("Reasoning models", "Concept", ["reasoning models?", "chain[- ]of[- ]thought"], None),
     ("Open-weight models", "Concept", ["open[- ]weights?", "open[- ]source models?"], None),
     ("RAG", "Concept", ["RAG", "retrieval[- ]augmented"], None),

@@ -136,6 +136,7 @@ RSS_FEEDS = [
     ("Sifted", "https://sifted.eu/feed", 0.7),  # European AI startups (AI-gated)
     ("Axios", "https://api.axios.com/feed/", 0.6),  # all-news firehose, AI-gated (Pro Rata has no RSS)
     ("GeekWire AI", "https://www.geekwire.com/tag/ai/feed/", 0.8),
+    ("TechRadar AI", "https://www.techradar.com/feeds/tag/ai", 0.6),  # consumer-tech AI tag -> AI-gated (some non-AI noise)
     ("Fast Company AI", "https://www.fastcompany.com/section/artificial-intelligence/rss", 0.8),
     ("NYT AI", "https://www.nytimes.com/svc/collections/v1/publish/https://www.nytimes.com/spotlight/artificial-intelligence/rss.xml", 0.9),
     ("CSET", "https://cset.georgetown.edu/feed/", 0.8),  # Georgetown AI/emerging-tech policy; org-wide feed -> AI-gated
@@ -207,6 +208,7 @@ AI_FILTER_SOURCES = {
     "NVIDIA Blog",  # whole-blog feed: gate out GeForce/automotive/Omniverse non-AI posts
     "CNBC Technology", "Seeking Alpha Tech",  # all-tech/markets feeds: keep only AI-relevant items
     "Sifted", "Axios",  # startups/deals + general-news feeds: keep only AI-relevant items
+    "TechRadar AI",  # consumer-tech AI tag feed carries non-AI reviews/deals: gate them out
 }
 
 # Per-feed caps: keep only the N most recent items from a firehose source so it can't

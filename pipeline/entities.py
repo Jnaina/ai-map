@@ -277,6 +277,15 @@ SEED = [
     ("Local LLM inference/offloading", "Concept", ["(?:CPU|GPU|NVMe|SSD|disk|memory|weight|layer|model|expert)[- ]offload(?:ing)?", "KV[- ]?cache offload(?:ing)?", "offload(?:ing)? to (?:CPU|RAM|NVMe|SSD|disk)", "inference optimi[sz]ation", "run(?:ning)? (?:large|massive|huge) (?:LLMs?|models?) (?:locally|on consumer)", "consumer[- ]grade GPUs?", "quantiz(?:ed|ation) inference"], None),
     ("AI funding", "Concept", ["raises? \\$", "raised \\$", "funding rounds?", "mega[- ]?rounds?",
                                "valuations?", "Series [A-F]\\b", "funding deals?", "venture rounds?"], None),
+    # Public markets + startups hub. Cluster-only (NOT added to AI_CONCEPTS in build.py), so matching a
+    # market/startup term does NOT by itself make a story AI-relevant -- it only groups stories that are
+    # already AI-relevant via another signal, so non-AI IPOs/stocks don't leak through the gate.
+    ("AI stocks/IPO/startups", "Concept",
+     ["IPOs?", "initial public offering", "going public", "public (?:offering|listing|debut)", "trading debut",
+      "direct listing", "AI stocks?", "AI bubble", "stock price", "share price", "market cap", "price target",
+      "earnings (?:call|report|beat|season)", "stock (?:surg|sink|jump|drop|rally|slump|soar|plung)\\w*",
+      "Nasdaq", "NYSE", "S&P 500", "AI startups?", "startups?", "unicorns?", "Y Combinator", "\\bYC\\b",
+      "Techstars", "stealth (?:startup|mode)", "early[- ]stage startups?"], None),
     ("Jobs & AI", "Concept", ["layoffs", "jobs", "workforce"], None),
     # China's AI scene: matched by phrasing here, AND routed from any Chinese AI entity (CHINA_AI below).
     ("China AI", "Concept", ["Chinese AI", "China AI", "China'?s AI",

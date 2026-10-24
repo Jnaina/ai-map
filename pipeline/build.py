@@ -272,6 +272,24 @@ def main():
                 fixed += 1
         print(f"Adjusted {fixed} of {len(imprecise)} future-dated links to their first-seen time")
 
+    # "GitHub (new repos)" are dated by pushed_at, so an actively-pushed repo reads as "just now" on
+    # every build and never decays -- the Trending-repos hub then stays pinned at max heat even though
+    # its repo set barely changes (big solid-red node, static feed). Re-date them to when we FIRST
+    # recorded the repo (first-seen), so a repo that has lingered in the list ages out and the hub
+    # reflects genuine churn (newly-appearing repos), not the static top-N. Brand-new repos (not yet
+    # in the archive) keep their fresh date. Trending AI Repos keep published=now on purpose -- their
+    # star-velocity sparkline is the signal, so a repo trending for days should stay visible.
+    newrepos = [s for s in stories if s.get("source") == "GitHub (new repos)"]
+    if newrepos:
+        fs = articles_db.first_seen_map([s["url"] for s in newrepos])
+        aged = 0
+        for s in newrepos:
+            seen = fs.get(s["url"])
+            if seen and seen < s["published"]:
+                s["published"] = seen
+                aged += 1
+        print(f"Re-dated {aged} of {len(newrepos)} GitHub new-repo links to first-seen (decay)")
+
     rec = Recogniser()
     mentions = {s["id"]: rec.find(s) for s in stories}
 

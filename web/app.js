@@ -275,7 +275,10 @@
       // collision radius covers the label width, so names don't sit on top of each other
       n.labelR = Math.max(n.topic ? n.size + 26 : n.size + 16, (n.label.length + 2) * (n.topic ? 4.6 : 3.6));
     });
-    hottestTopic = nodes.filter((n) => n.topic).sort((a, b) => b.heat - a.heat)[0];
+    // The "Trending repos" hub is a navigational cluster, not a news topic -- exclude it from the
+    // "hottest topic" accent (solid-orange fill) so that styling marks the genuinely-hottest news
+    // topic. Its size still scales with heat (now decayed, see first-seen re-dating in build.py).
+    hottestTopic = nodes.filter((n) => n.topic && n.id !== "trending-repos").sort((a, b) => b.heat - a.heat)[0];
     lag = data.trend_lag_hours || 24;
 
     // ---- header / legend / source list / search autocomplete

@@ -359,8 +359,19 @@ def fetch_article_text(url, log=print, max_chars=8000, timeout=10):
     except Exception as e:
         log(f"  ! body {url[:50]}: {str(e)[:50]}")
         return None
-    # Drop script/style/noscript blocks so their contents don't pollute entity matching.
-    html = re.sub(r"(?is)<(script|style|noscript)[^>]*>.*?</\1>", " ", html)
+    # Isolate the real article prose from page chrome before entity matching. News pages embed
+    # recirculation modules ("related"/"more news" teasers), share widgets and nav whose text names
+    # unrelated entities — e.g. an "OpenAI agents..." teaser on a crime story — which would falsely
+    # attach the story to those nodes AND slip it past the AI-relevance gate. Three steps:
+    #  1) drop scripts and structural chrome (nav/header/footer/aside/form);
+    #  2) keep only the <article> element when the page has one;
+    #  3) drop hyperlink text (teaser headlines, share/widget/related links are all <a>), which is
+    #     where the cross-contamination lives — article prose is overwhelmingly non-link text.
+    html = re.sub(r"(?is)<(script|style|noscript|nav|header|footer|aside|form)\b[^>]*>.*?</\1>", " ", html)
+    m = re.search(r"(?is)<article\b[^>]*>(.*?)</article>", html)
+    if m:
+        html = m.group(1)
+    html = re.sub(r"(?is)<a\b[^>]*>.*?</a>", " ", html)
     return _clean(html)[:max_chars]
 
 

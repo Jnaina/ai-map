@@ -302,20 +302,26 @@ def main():
             if mentions[s["id"]] & CHINA_AI:
                 mentions[s["id"]].add("china-ai")
 
-    # "Trending AI Repos" lane: each trending repo already became its own "Open source" node (via
-    # gh_repo in rec.find). Route it to the "Trending repos" hub concept so they cluster, and stash
-    # its star velocity + 30-day series (keyed by the repo node id) to attach to the node in build_view.
+    # GitHub repo lanes ("GitHub (new repos)" + "Trending AI Repos") are high-volume and noisy: a
+    # repo's description or its GH_ORGS parent would otherwise pump heat/stories into big company and
+    # concept nodes (Microsoft, Google, OpenAI, ai-agents, mcp...), drowning out actual news. Confine
+    # every GitHub-repo story to just its OWN repo node plus the "Trending repos" hub -- so GitHub
+    # content shows up only in the Trending-repos cluster and nowhere else. (The repo node keeps its
+    # org parent attribute for layout, but that link adds no heat.) Trending repos also stash their
+    # star velocity + 30-day series, keyed by repo node id, for the node sparkline in build_view.
+    GH_LANES = {"GitHub (new repos)", "Trending AI Repos"}
+    hub = "trending-repos"
     repo_meta = {}
     for s in stories:
-        if s.get("source") != "Trending AI Repos":
+        if s.get("source") not in GH_LANES:
             continue
         name = (s.get("gh_repo") or "").split("/", 1)[-1]
-        eid = slug(name)
-        repo_meta[eid] = dict(series=s.get("star_series") or [], d1=s.get("star_delta_1d"),
-                              d7=s.get("star_delta_7d"), pct7=s.get("star_pct_7d"),
-                              surging=bool(s.get("surging")))
-        if "trending-repos" in rec.ents:
-            mentions[s["id"]].add("trending-repos")
+        eid = slug(name) if name else None
+        mentions[s["id"]] = {e for e in (eid, hub) if e and e in rec.ents}
+        if s.get("source") == "Trending AI Repos" and eid:
+            repo_meta[eid] = dict(series=s.get("star_series") or [], d1=s.get("star_delta_1d"),
+                                  d7=s.get("star_delta_7d"), pct7=s.get("star_pct_7d"),
+                                  surging=bool(s.get("surging")))
 
     # "AI-specific" entity: not just a big-tech name ("Apple"/"Amazon") or a generic concept.
     def ai_specific(e):

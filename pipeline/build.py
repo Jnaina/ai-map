@@ -323,6 +323,16 @@ def main():
                                   d7=s.get("star_delta_7d"), pct7=s.get("star_pct_7d"),
                                   surging=bool(s.get("surging")))
 
+    # Hugging Face Trending models are the same kind of noise: a trending checkpoint leaks into its
+    # org's company node (Alibaba/Qwen, Google, Meta, DeepSeek...) and into concepts (china-ai,
+    # fine-tuning...), inflating them with raw model churn rather than news. Confine the trending-
+    # models lane to the "Hugging Face" node only (NOT HF Papers/Blog, which are real per-entity
+    # content). (breaking_stats skips kind=="model" and llm_extract ignores it, so nothing re-adds.)
+    if "hugging-face" in rec.ents:
+        for s in stories:
+            if s.get("source") == "Hugging Face Trending":
+                mentions[s["id"]] = {"hugging-face"}
+
     # "AI-specific" entity: not just a big-tech name ("Apple"/"Amazon") or a generic concept.
     def ai_specific(e):
         return e not in NOT_AI_SPECIFIC and rec.ents[e]["type"] != "Concept" or e in AI_CONCEPTS

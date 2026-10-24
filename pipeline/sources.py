@@ -130,6 +130,9 @@ RSS_FEEDS = [
     ("AIhub", "https://aihub.org/feed/?cat=-473", 0.9),  # non-profit AI research community
     ("The Conversation AI", "https://theconversation.com/topics/artificial-intelligence-ai-90/articles.atom", 0.8),
     ("Crunchbase News AI", "https://news.crunchbase.com/sections/ai/feed/", 0.8),  # AI startup/funding
+    # AI stocks / public markets / IPO (all-tech feeds -> AI-gated below to drop non-AI market noise)
+    ("CNBC Technology", "https://www.cnbc.com/id/19854910/device/rss/rss.html", 0.8),  # AI stocks/earnings/markets
+    ("Seeking Alpha Tech", "https://seekingalpha.com/sector/technology.xml", 0.7),  # AI stock analysis
     ("GeekWire AI", "https://www.geekwire.com/tag/ai/feed/", 0.8),
     ("Fast Company AI", "https://www.fastcompany.com/section/artificial-intelligence/rss", 0.8),
     ("NYT AI", "https://www.nytimes.com/svc/collections/v1/publish/https://www.nytimes.com/spotlight/artificial-intelligence/rss.xml", 0.9),
@@ -200,6 +203,7 @@ AI_FILTER_SOURCES = {
     "The Next Platform", "IEEE Spectrum Semiconductors", "EE Times",
     "Semiconductor Engineering", "ServeTheHome", "Tom's Hardware", "SemiWiki",
     "NVIDIA Blog",  # whole-blog feed: gate out GeForce/automotive/Omniverse non-AI posts
+    "CNBC Technology", "Seeking Alpha Tech",  # all-tech/markets feeds: keep only AI-relevant items
 }
 
 # Per-feed caps: keep only the N most recent items from a firehose source so it can't

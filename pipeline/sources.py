@@ -372,7 +372,15 @@ def fetch_article_text(url, log=print, max_chars=8000, timeout=10):
     if m:
         html = m.group(1)
     html = re.sub(r"(?is)<a\b[^>]*>.*?</a>", " ", html)
-    return _clean(html)[:max_chars]
+    txt = _clean(html)
+    # Social-share toolbars (icon buttons rendered as text inside the article) leak brand names —
+    # e.g. CNN's "Facebook Tweet Link Threads Link Copied!" attaches the story to Meta. A run of 2+
+    # consecutive share-UI labels is a toolbar; a lone "Facebook" in prose ("Facebook announced...")
+    # is left untouched.
+    txt = re.sub(r"(?i)(?:\b(?:facebook|tweet|threads|whatsapp|reddit|linkedin|telegram|messenger|"
+                 r"pinterest|bluesky|flipboard|mastodon|share|email|link copied!?|copy link)\b[\s.,!|·•\-]*){2,}",
+                 " ", txt)
+    return txt[:max_chars]
 
 
 def _parse_date(s):

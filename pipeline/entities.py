@@ -245,7 +245,9 @@ SEED = [
     ("Tim Cook", "Person", ["Tim Cook"], "Apple"),
     ("Andy Jassy", "Person", ["Andy Jassy"], "Amazon"),
     # --- concepts (case-insensitive)
-    ("AI agents", "Concept", ["AI agents?", "agentic", "agents"], None),
+    # NB: no bare "agents" alias -- it matches law-enforcement/travel/insurance "agents" etc.
+    # (e.g. "Border Patrol agents"). "agentic" and "AI agent(s)" are the unambiguous signals.
+    ("AI agents", "Concept", ["AI agents?", "agentic", "autonomous agents?"], None),
     ("Reasoning models", "Concept", ["reasoning models?", "chain[- ]of[- ]thought"], None),
     ("Open-weight models", "Concept", ["open[- ]weights?", "open[- ]source models?"], None),
     ("RAG", "Concept", ["RAG", "retrieval[- ]augmented"], None),

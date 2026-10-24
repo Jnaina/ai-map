@@ -28,7 +28,23 @@ cp -a "$PAGES"/public_extra/_headers "$DIST"/_headers
 # Output dir comes from wrangler.toml (pages_build_output_dir=dist), so no positional arg.
 cd "$PAGES"
 export CLOUDFLARE_ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID:-4d92d2ca307430c0f6706269f613fb47}"
-npx --yes wrangler pages deploy \
-  --project-name="$PROJECT" \
-  --branch=main \
-  --commit-dirty=true
+# wrangler's usage-metrics fetch throws "TypeError: fetch failed" on a transient network blip and
+# aborts the whole deploy; disabling it removes that failure mode (and the noise).
+export WRANGLER_SEND_METRICS=false
+# Deploy with retries: the Cloudflare API call still fails intermittently on a network blip, and a
+# retry almost always succeeds. Exit non-zero only if EVERY attempt fails, so run.sh's exit-code
+# check does not advance the deploy marker (data/.last-deploy.sig) on a genuine failure -> it retries
+# next run. The `if` condition is exempt from `set -e`, so a failed attempt doesn't abort the script.
+attempts=5
+for n in $(seq 1 "$attempts"); do
+  if npx --yes wrangler pages deploy \
+       --project-name="$PROJECT" \
+       --branch=main \
+       --commit-dirty=true; then
+    exit 0
+  fi
+  echo "wrangler deploy attempt $n/$attempts failed; retrying in 5s..." >&2
+  sleep 5
+done
+echo "wrangler deploy failed after $attempts attempts" >&2
+exit 1

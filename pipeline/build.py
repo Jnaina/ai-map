@@ -99,6 +99,19 @@ def breaking_stats(stories, mentions, now):
     return flags
 
 
+def _alias_count(rec, eid, text):
+    """How many times entity `eid`'s aliases occur in `text` (seed entities have one combined regex)."""
+    return sum(len(rx.findall(text)) for rx, e in rec.rx if e == eid)
+
+
+def _chrome_prone(rec, eid):
+    """Big companies and broad concepts are the entities that leak from page chrome (share bars,
+    recommendation teasers, comments, rotating recirculation) as single incidental mentions, so body
+    enrichment requires >=2 mentions for them. Specific entities (models, niche open-source projects,
+    people, hardware) still attach on a single mention."""
+    return rec.ents.get(eid, {}).get("type") in ("Company", "Concept")
+
+
 def enrich_orphans(stories, mentions, rec, min_points=50, max_fetch=12):
     """Rescue high-engagement Hacker News stories whose headline names no entity but whose article
     body does (e.g. a model-comparison post titled "Every AI model has the same take" that discusses
@@ -129,6 +142,7 @@ def enrich_orphans(stories, mentions, rec, min_points=50, max_fetch=12):
             cache[sid] = {"text": text, "ts": now} if text is not None else {"ok": False, "ts": now}
         if text:
             extra = rec.find({"id": sid, "text": text, "title": s.get("title", "")})
+            extra = {e for e in extra if not _chrome_prone(rec, e) or _alias_count(rec, e, text) >= 2}
             if extra:
                 mentions[sid] |= extra
                 rescued += 1

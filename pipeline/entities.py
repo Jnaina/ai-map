@@ -275,7 +275,8 @@ SEED = [
     ("Benchmarks", "Concept", ["benchmarks?", "leaderboard", "SWE-bench", "ARC-AGI"], None),
     ("On-device AI", "Concept", ["on-device", "local LLMs?", "local models?", "edge AI"], None),
     ("Local LLM inference/offloading", "Concept", ["(?:CPU|GPU|NVMe|SSD|disk|memory|weight|layer|model|expert)[- ]offload(?:ing)?", "KV[- ]?cache offload(?:ing)?", "offload(?:ing)? to (?:CPU|RAM|NVMe|SSD|disk)", "inference optimi[sz]ation", "run(?:ning)? (?:large|massive|huge) (?:LLMs?|models?) (?:locally|on consumer)", "consumer[- ]grade GPUs?", "quantiz(?:ed|ation) inference"], None),
-    ("AI funding", "Concept", ["raises \\$", "funding round", "valuation", "Series [A-F]"], None),
+    ("AI funding", "Concept", ["raises? \\$", "raised \\$", "funding rounds?", "mega[- ]?rounds?",
+                               "valuation", "Series [A-F]\\b", "funding deals?", "venture rounds?"], None),
     ("Jobs & AI", "Concept", ["layoffs", "jobs", "workforce"], None),
     # China's AI scene: matched by phrasing here, AND routed from any Chinese AI entity (CHINA_AI below).
     ("China AI", "Concept", ["Chinese AI", "China AI", "China'?s AI",

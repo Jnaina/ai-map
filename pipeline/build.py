@@ -51,7 +51,10 @@ BREAK_MIN_WEIGHT = 2.0
 NOT_AI_SPECIFIC = {"google", "apple", "amazon", "microsoft", "meta", "tesla", "samsung", "intel", "ibm", "oracle",
                    "salesforce", "broadcom", "qualcomm", "huawei", "tencent", "baidu", "bytedance", "tsmc", "arm",
                    "snowflake", "palantir", "sk-hynix", "amd", "waymo", "tim-cook", "andy-jassy", "elon-musk",
-                   "mark-zuckerberg", "sundar-pichai", "satya-nadella"}
+                   # nvidia, like its chip peers (amd/intel/qualcomm/broadcom/tsmc) above, appears in many
+                   # NON-AI contexts (gaming GPUs, NVENC/encoding, NVIDIA Broadcast, drivers), so NVIDIA
+                   # alone shouldn't flag a gated HN/general story as AI -- it needs corroborating AI signal.
+                   "nvidia", "mark-zuckerberg", "sundar-pichai", "satya-nadella"}
 AI_CONCEPTS = {"ai-agents", "reasoning-models", "open-weight-models", "rag", "agi-superintelligence",
                "ai-safety-alignment", "coding-agents", "video-generation", "on-device-ai",
                "local-llm-inference-offloading", "ai-chips", "china-ai", "trending-repos", "agent-harness"}

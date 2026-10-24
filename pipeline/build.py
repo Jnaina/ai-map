@@ -352,6 +352,16 @@ def main():
     for sid, extra in llm_extract(stories, rec).items():
         mentions[sid] |= extra
 
+    # Confine specific single-project release feeds to their own project node. Their release notes
+    # name supported models/hardware (NVIDIA, DeepSeek, Qwen...) and route to concepts (china-ai),
+    # which is noise on those nodes. Done here, after llm_extract, because release items are
+    # kind=="news" (which llm_extract processes) so an earlier override would be re-polluted.
+    RELEASE_CONFINE = {"Strata (releases)": "strata", "Project Maya (releases)": "project-maya"}
+    for s in stories:
+        tgt = RELEASE_CONFINE.get(s.get("source"))
+        if tgt and tgt in rec.ents:
+            mentions[s["id"]] = {tgt}
+
     breaking = breaking_stats(stories, mentions, now)
     hist = json.load(open(HISTORY)) if os.path.exists(HISTORY) else {"runs": [], "entities": {}}
     stamp = iso(now)

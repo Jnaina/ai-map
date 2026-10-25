@@ -515,15 +515,16 @@ def fetch_rss(name, url, weight, since, log):
     return out
 
 
-def fetch_hn(since, log, min_points=30, early_points=10, early_hours=3):
-    """Every story currently on the HN front page (any score) + popular stories across the window.
+def fetch_hn(since, log, max_pages=8):
+    """Every HN submission in the window (the /newest firehose, ANY score) + the current front page.
 
-    The front-page set catches low-score AI posts the moment they reach the main page (polled every
-    run, so front-page turnover is captured); build.py then AI-gates every HN story, keeping only the
-    AI-related ones. The windowed popular set (above `min_points`, or above `early_points` while <
-    `early_hours` old) keeps heat stable for stories that have since dropped off the front page."""
+    The firehose catches even a low-point AI story (e.g. an Atlantic AI essay sitting at 6 points);
+    the front-page query guarantees the current main page is always included. build.py then AI-gates
+    every HN story through the LLM, so only the AI-related ones reach the map and the archive. Polled
+    every run, so new submissions are picked up within ~2 min of posting; the 90-day archive keeps
+    them, so forward coverage is complete. (Algolia returns newest-first, up to max_pages*1000, which
+    covers several days of the window; older low-point stories already live in the accumulated archive.)"""
     out, seen = [], set()
-    now = time.time()
 
     def add(h):
         oid = h.get("objectID")
@@ -547,26 +548,23 @@ def fetch_hn(since, log, min_points=30, early_points=10, early_hours=3):
         log(f"  ! Hacker News front page: {str(e)[:80]}")
     fp_n = len(out)
 
-    # 2) popular stories across the whole window (heat continuity once they leave the front page)
+    # 2) the /newest firehose: every story submitted in the window, no points floor
     page = 0
-    while page < 5:
+    while page < max_pages:
         q = urllib.parse.urlencode({"tags": "story", "hitsPerPage": 1000, "page": page,
-                                    "numericFilters": f"created_at_i>{int(since)},points>{early_points}"})
+                                    "numericFilters": f"created_at_i>{int(since)}"})
         try:
             data = json.loads(_get("https://hn.algolia.com/api/v1/search_by_date?" + q))
         except Exception as e:
-            log(f"  ! Hacker News: {str(e)[:80]}")
+            log(f"  ! Hacker News firehose: {str(e)[:80]}")
             break
         for h in data.get("hits", []):
-            pts, created = h.get("points") or 0, h.get("created_at_i", 0)
-            if pts <= min_points and now - created > early_hours * 3600:
-                continue
             add(h)
         page += 1
         if page >= data.get("nbPages", 0):
             break
-    log(f"  Hacker News: {len(out)} stories ({fp_n} on the front page + "
-        f"popular in window; AI-gated downstream)")
+    log(f"  Hacker News: {len(out)} stories ({fp_n} front page + {len(out) - fp_n} new in window; "
+        f"AI-gated downstream)")
     return out
 
 

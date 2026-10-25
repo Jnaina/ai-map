@@ -485,20 +485,24 @@
   // window width, so we measure live rather than trust a fixed offset. If the feed's content is
   // taller than the gap, max-height + the list's own scroll keep it inside.
   const FEED_GAP = 12;
+  // a visible rect for an element, or null — works for the fixed-position chrome, whose
+  // offsetParent is always null (that was the bug: it made every menu look "hidden").
+  const visRect = (sel) => {
+    const el = $(sel);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return (r.width > 0 && r.height > 0) ? r : null;
+  };
   function fitFeed() {
     const wrap = $("#feed");
     if (!wrap || wrap.hidden) return;
     const vh = window.innerHeight;
     // top boundary: the lowest edge of any visible top-chrome element
     let topEdge = 0;
-    ["#bar", "#types"].forEach((sel) => {
-      const el = $(sel);
-      if (el && el.offsetParent !== null) { const r = el.getBoundingClientRect(); if (r.bottom > topEdge) topEdge = r.bottom; }
-    });
+    ["#bar", "#types"].forEach((sel) => { const r = visRect(sel); if (r && r.bottom > topEdge) topEdge = r.bottom; });
     // bottom boundary: the top of the legend if it's showing, else the viewport floor
-    let bottomEdge = vh;
-    const legend = $("#legend");
-    if (legend && legend.offsetParent !== null) { const r = legend.getBoundingClientRect(); if (r.height) bottomEdge = r.top; }
+    const lg = visRect("#legend");
+    const bottomEdge = lg ? lg.top : vh;
     wrap.style.bottom = Math.max(FEED_GAP, vh - bottomEdge + FEED_GAP) + "px";
     wrap.style.maxHeight = Math.max(120, bottomEdge - topEdge - FEED_GAP * 2) + "px";
   }

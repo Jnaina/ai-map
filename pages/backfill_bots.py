@@ -18,18 +18,20 @@ ACCOUNT = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "4d92d2ca307430c0f6706269f613f
 # --- keep in sync with functions/_middleware.js ---------------------------------------
 PAGES = {"/", "/index.html", "/articles", "/articles.html"}
 BROWSER_UA = re.compile(r"^Mozilla/5\.0 \(")
+# A "+http(s)://..." contact URL inside the UA is a near-universal crawler convention
+# (e.g. "Mozilla/5.0 (compatible; DataAIHub/1.0; +https://...)"); real browsers never carry one.
 BOT_UA = re.compile(
     r"bot|crawl|spider|slurp|scan|preview|fetch|curl|wget|python|go-http|java/|okhttp|axios|undici|"
     r"libwww|httpclient|scrapy|headless|phantom|puppeteer|playwright|selenium|monitor|uptime|pingdom|"
     r"lighthouse|facebookexternalhit|whatsapp|telegram|discord|slack|leakix|censys|zgrab|masscan|nmap|"
     r"nuclei|expanse|internet-measurement|semrush|ahrefs|mj12|yandex|baidu|bytespider|petal|gptbot|"
-    r"claude|perplexity|ccbot|amazonbot|applebot", re.I)
+    r"claude|perplexity|ccbot|amazonbot|applebot|\+https?://", re.I)
 DC_ASN = re.compile(
     r"google|amazon|aws|microsoft|azure|digital ?ocean|linode|akamai|ovh|hetzner|vultr|choopa|"
     r"constant company|oracle|alibaba|tencent|huawei|contabo|m247|leaseweb|palo alto|virtualine|ghosty|"
     r"cloudflare|dedik|egihosting|hostpapa|custodiandc|green floid|web2objects|aventice|virtual systems|"
     r"scaleway|netcup|ionos|hostinger|godaddy|datacamp|code200|hostroyale|mevspace|blatant|subnet digital|"
-    r"data ?cent(er|re)|hosting|server|vps|cloud", re.I)
+    r"railway|fly\.io|render|vercel|netlify|heroku|data ?cent(er|re)|hosting|server|vps|cloud", re.I)
 
 
 def bot_reason(path, ua, asn):

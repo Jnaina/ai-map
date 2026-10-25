@@ -18,8 +18,10 @@ const ASSET_RX = /\.(?:js|css|json|png|jpe?g|gif|svg|ico|webp|woff2?|ttf|map|txt
 
 const PAGES = new Set(["/", "/index.html", "/articles", "/articles.html"]);
 const BROWSER_UA_RX = /^Mozilla\/5\.0 \(/;
-const BOT_UA_RX = /bot|crawl|spider|slurp|scan|preview|fetch|curl|wget|python|go-http|java\/|okhttp|axios|undici|libwww|httpclient|scrapy|headless|phantom|puppeteer|playwright|selenium|monitor|uptime|pingdom|lighthouse|facebookexternalhit|whatsapp|telegram|discord|slack|leakix|censys|zgrab|masscan|nmap|nuclei|expanse|internet-measurement|semrush|ahrefs|mj12|yandex|baidu|bytespider|petal|gptbot|claude|perplexity|ccbot|amazonbot|applebot/i;
-const DC_ASN_RX = /google|amazon|aws|microsoft|azure|digital ?ocean|linode|akamai|ovh|hetzner|vultr|choopa|constant company|oracle|alibaba|tencent|huawei|contabo|m247|leaseweb|palo alto|virtualine|ghosty|cloudflare|dedik|egihosting|hostpapa|custodiandc|green floid|web2objects|aventice|virtual systems|scaleway|netcup|ionos|hostinger|godaddy|datacamp|code200|hostroyale|mevspace|blatant|subnet digital|data ?cent(er|re)|hosting|server|vps|cloud/i;
+// A "+http(s)://..." contact URL inside the UA is a near-universal crawler convention
+// (e.g. "Mozilla/5.0 (compatible; DataAIHub/1.0; +https://...)"); real browsers never carry one.
+const BOT_UA_RX = /bot|crawl|spider|slurp|scan|preview|fetch|curl|wget|python|go-http|java\/|okhttp|axios|undici|libwww|httpclient|scrapy|headless|phantom|puppeteer|playwright|selenium|monitor|uptime|pingdom|lighthouse|facebookexternalhit|whatsapp|telegram|discord|slack|leakix|censys|zgrab|masscan|nmap|nuclei|expanse|internet-measurement|semrush|ahrefs|mj12|yandex|baidu|bytespider|petal|gptbot|claude|perplexity|ccbot|amazonbot|applebot|\+https?:\/\//i;
+const DC_ASN_RX = /google|amazon|aws|microsoft|azure|digital ?ocean|linode|akamai|ovh|hetzner|vultr|choopa|constant company|oracle|alibaba|tencent|huawei|contabo|m247|leaseweb|palo alto|virtualine|ghosty|cloudflare|dedik|egihosting|hostpapa|custodiandc|green floid|web2objects|aventice|virtual systems|scaleway|netcup|ionos|hostinger|godaddy|datacamp|code200|hostroyale|mevspace|blatant|subnet digital|railway|fly\.io|render|vercel|netlify|heroku|data ?cent(er|re)|hosting|server|vps|cloud/i;
 
 function botReason(path, ua, asn) {
   if (!PAGES.has(path)) return "probe";

@@ -409,7 +409,7 @@
     $("#closePanel").addEventListener("click", () => select(null));
     $("#aboutBtn").addEventListener("click", () => $("#about").showModal());
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") select(null); });
-    window.addEventListener("resize", () => fit(false));
+    window.addEventListener("resize", () => { fit(false); fitFeed(); });
 
     $("#search").addEventListener("change", async (e) => {
       const raw = e.target.value.trim();
@@ -480,6 +480,28 @@
   function refreshFeedTimes() {
     document.querySelectorAll("#feedList .fage").forEach((e) => { e.textContent = relShort(e.dataset.ts); });
   }
+  // Clamp the HUD into the gap between the top chrome (header + type chips) and the bottom legend,
+  // so it can never cover either menu. The legend wraps to a variable number of lines with the
+  // window width, so we measure live rather than trust a fixed offset. If the feed's content is
+  // taller than the gap, max-height + the list's own scroll keep it inside.
+  const FEED_GAP = 12;
+  function fitFeed() {
+    const wrap = $("#feed");
+    if (!wrap || wrap.hidden) return;
+    const vh = window.innerHeight;
+    // top boundary: the lowest edge of any visible top-chrome element
+    let topEdge = 0;
+    ["#bar", "#types"].forEach((sel) => {
+      const el = $(sel);
+      if (el && el.offsetParent !== null) { const r = el.getBoundingClientRect(); if (r.bottom > topEdge) topEdge = r.bottom; }
+    });
+    // bottom boundary: the top of the legend if it's showing, else the viewport floor
+    let bottomEdge = vh;
+    const legend = $("#legend");
+    if (legend && legend.offsetParent !== null) { const r = legend.getBoundingClientRect(); if (r.height) bottomEdge = r.top; }
+    wrap.style.bottom = Math.max(FEED_GAP, vh - bottomEdge + FEED_GAP) + "px";
+    wrap.style.maxHeight = Math.max(120, bottomEdge - topEdge - FEED_GAP * 2) + "px";
+  }
   function renderFeed(latest) {
     const list = $("#feedList"), wrap = $("#feed");
     if (!list || !wrap) return;
@@ -488,6 +510,7 @@
     if (!items.length) return;
     const order = items.map((it) => it.url);
     wrap.hidden = false;
+    fitFeed();   // size/position into the gap between the menus now that it's visible
     if (order.length === feedUrls.length && order.every((u, i) => u === feedUrls[i])) { refreshFeedTimes(); return; }
     const prev = new Set(feedUrls);  // the build we were showing; after the first paint, anything not in it is new
     list.innerHTML = items.map((it) => {

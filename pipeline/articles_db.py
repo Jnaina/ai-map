@@ -121,16 +121,19 @@ def export_recent(db_path=DB_PATH, out_path=EXPORT_PATH, days=EXPORT_DAYS, log=p
     exempt = sorted(FULL_HISTORY_SOURCES)
     ph = ",".join("?" * len(exempt))
     where = "published >= ?" + (f" OR source IN ({ph})" if exempt else "")
+    # Ordered by first_seen (discovery) DESC so the Articles page matches the on-map "incoming feed",
+    # which is also discovery-ordered. first_seen is stable per URL (set once), so synthetic entries
+    # stamped published=now for the heat map (HF Trending, Trending Repos) no longer flood the top.
     cur = conn.execute(
-        f"""SELECT url,title,source,domain,kind,published,engagement,discussion
-           FROM articles WHERE {where} ORDER BY published DESC""", (cutoff, *exempt))
+        f"""SELECT url,title,source,domain,kind,published,engagement,discussion,first_seen
+           FROM articles WHERE {where} ORDER BY first_seen DESC, published DESC""", (cutoff, *exempt))
     by_source = defaultdict(list)
     total = 0
-    for url, title, source, domain, kind, published, engagement, discussion in cur:
+    for url, title, source, domain, kind, published, engagement, discussion, first_seen in cur:
         by_source[source or domain or "Other"].append(dict(
             url=url, title=title, domain=domain, kind=kind,
             published=published, engagement=engagement,
-            discussion=discussion or None))
+            discussion=discussion or None, first_seen=first_seen))
         total += 1
     conn.close()
 

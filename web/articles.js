@@ -32,19 +32,23 @@ function fmtDate(sec) {
   return `${date} · ${rel}`;
 }
 
-// All articles across sources, newest first (for the "All sources" tab).
+// Sort key: when we discovered the link (first_seen), newest first — matches the on-map incoming
+// feed. Fall back to published for any older row the export predates.
+const byDiscovery = (x, y) => (y.first_seen || y.published || 0) - (x.first_seen || x.published || 0);
+
+// All articles across sources, newest-discovered first (for the "All sources" tab).
 function allArticles() {
   const out = [];
   for (const s of state.data.sources) {
     for (const a of state.data.articles[s.source]) out.push({ ...a, source: s.source });
   }
-  out.sort((x, y) => y.published - x.published);
+  out.sort(byDiscovery);
   return out;
 }
 
 function currentArticles() {
   if (state.source === null) return allArticles();
-  return (state.data.articles[state.source] || []).map(a => ({ ...a, source: state.source }));
+  return (state.data.articles[state.source] || []).map(a => ({ ...a, source: state.source })).sort(byDiscovery);
 }
 
 function favHtml(s) {
@@ -72,7 +76,9 @@ function renderNav() {
   }));
 }
 
-function renderList() {
+function renderList(keepScroll) {
+  const scroller = el.list.parentElement;
+  const prevTop = scroller.scrollTop;
   let items = currentArticles();
   const q = state.q.trim().toLowerCase();
   if (q) items = items.filter(a => (a.title || "").toLowerCase().includes(q) || (a.domain || "").includes(q));
@@ -91,7 +97,7 @@ function renderList() {
       <div class="ameta">${src}<span class="dom">${esc(a.domain)}</span><span>${fmtDate(a.published)}</span>${eng}<span class="kind">${KIND_LABEL[a.kind] || a.kind || ""}</span>${disc}</div>
     </li>`;
   }).join("");
-  el.list.parentElement.scrollTop = 0;
+  scroller.scrollTop = keepScroll ? prevTop : 0;
 }
 
 function selectSource(source) {
@@ -122,6 +128,25 @@ async function main() {
 
   el.search.addEventListener("input", () => { state.q = el.search.value; renderList(); });
   window.addEventListener("hashchange", () => { state.source = sourceFromHash(); renderNav(); renderList(); });
+
+  // Live refresh: the archive is otherwise a one-shot load, so newly discovered items (which show
+  // up immediately in the map's incoming feed) wouldn't appear here until a manual reload. Poll the
+  // same file the build redeploys; re-render only when it actually changed, preserving the selected
+  // source, the search box and the scroll position so reading isn't disrupted.
+  async function refresh() {
+    if (document.hidden) return;
+    let nd;
+    try { nd = await (await fetch("data/articles.json", { cache: "no-store" })).json(); }
+    catch (e) { return; }
+    if (!nd || nd.generated_at === state.data.generated_at) return;  // nothing new
+    const keepSource = state.source && nd.articles[state.source] ? state.source : null;
+    state.data = nd;
+    state.source = keepSource;
+    renderNav();
+    renderList(true);  // keep scroll position
+  }
+  setInterval(refresh, 120000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
 }
 
 main();

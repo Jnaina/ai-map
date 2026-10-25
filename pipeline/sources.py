@@ -297,9 +297,9 @@ DOMAIN_ENTITY = {
 # so we only drop params we're sure are tracking. Anything starting "utm_" goes regardless.
 TRACKING_PARAMS = {
     "position", "partner", "campaign", "campaign_date", "newsletter", "ref", "ref_src", "ref_url",
-    "referrer", "source", "cmpid", "ncid", "fbclid", "gclid", "dclid", "gbraid", "wbraid", "msclkid",
-    "yclid", "igshid", "igsh", "mc_cid", "mc_eid", "_hsenc", "_hsmi", "hsctatracking", "spm", "scm",
-    "vero_id", "vero_conv", "oly_anon_id", "oly_enc_id", "guccounter", "guce_referrer",
+    "referrer", "source", "feed", "cmpid", "ncid", "fbclid", "gclid", "dclid", "gbraid", "wbraid",
+    "msclkid", "yclid", "igshid", "igsh", "mc_cid", "mc_eid", "_hsenc", "_hsmi", "hsctatracking",
+    "spm", "scm", "vero_id", "vero_conv", "oly_anon_id", "oly_enc_id", "guccounter", "guce_referrer",
     "guce_referrer_sig", "sr_share", "cmp", "at_medium", "at_campaign",
 }
 

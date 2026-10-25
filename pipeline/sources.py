@@ -516,10 +516,39 @@ def fetch_rss(name, url, weight, since, log):
 
 
 def fetch_hn(since, log, min_points=30, early_points=10, early_hours=3):
-    """Stories above `min_points`, plus fresh ones (< early_hours old) above `early_points`,
-    so a breakout is caught while it's still climbing."""
-    out, page = [], 0
+    """Every story currently on the HN front page (any score) + popular stories across the window.
+
+    The front-page set catches low-score AI posts the moment they reach the main page (polled every
+    run, so front-page turnover is captured); build.py then AI-gates every HN story, keeping only the
+    AI-related ones. The windowed popular set (above `min_points`, or above `early_points` while <
+    `early_hours` old) keeps heat stable for stories that have since dropped off the front page."""
+    out, seen = [], set()
     now = time.time()
+
+    def add(h):
+        oid = h.get("objectID")
+        if not oid or oid in seen:
+            return
+        seen.add(oid)
+        title = h.get("title") or ""
+        url = canonical_url(h.get("url")) or f"https://news.ycombinator.com/item?id={oid}"
+        out.append(dict(id=f"hn:{oid}", title=title, url=url, source="Hacker News",
+                        kind="discussion", published=h.get("created_at_i", 0),
+                        engagement=h.get("points") or 0, weight=1.0, text=title,
+                        discussion=f"https://news.ycombinator.com/item?id={oid}"))
+
+    # 1) the whole current front page, regardless of score (these have "hit the main page")
+    try:
+        fp = json.loads(_get("https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=100"))
+        for h in fp.get("hits", []):
+            if (h.get("created_at_i") or 0) >= since:
+                add(h)
+    except Exception as e:
+        log(f"  ! Hacker News front page: {str(e)[:80]}")
+    fp_n = len(out)
+
+    # 2) popular stories across the whole window (heat continuity once they leave the front page)
+    page = 0
     while page < 5:
         q = urllib.parse.urlencode({"tags": "story", "hitsPerPage": 1000, "page": page,
                                     "numericFilters": f"created_at_i>{int(since)},points>{early_points}"})
@@ -532,16 +561,12 @@ def fetch_hn(since, log, min_points=30, early_points=10, early_hours=3):
             pts, created = h.get("points") or 0, h.get("created_at_i", 0)
             if pts <= min_points and now - created > early_hours * 3600:
                 continue
-            title = h.get("title") or ""
-            url = canonical_url(h.get("url")) or f"https://news.ycombinator.com/item?id={h.get('objectID')}"
-            out.append(dict(id=f"hn:{h.get('objectID')}", title=title, url=url, source="Hacker News",
-                            kind="discussion", published=h.get("created_at_i", 0),
-                            engagement=h.get("points") or 0, weight=1.0, text=title,
-                            discussion=f"https://news.ycombinator.com/item?id={h.get('objectID')}"))
+            add(h)
         page += 1
         if page >= data.get("nbPages", 0):
             break
-    log(f"  Hacker News: {len(out)} stories (>{min_points} points, or >{early_points} if under {early_hours} h old)")
+    log(f"  Hacker News: {len(out)} stories ({fp_n} on the front page + "
+        f"popular in window; AI-gated downstream)")
     return out
 
 

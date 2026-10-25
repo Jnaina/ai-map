@@ -371,6 +371,24 @@ def main():
             if s.get("source") == "Hugging Face Trending":
                 mentions[s["id"]] = {"hugging-face"}
 
+    # Run the LLM entity pass BEFORE the AI-relevance gate, so each story is judged on the entities the
+    # LLM finds, not only dictionary hits and keywords. This catches AI stories -- especially on Hacker
+    # News, now fetched down to low-score front-page posts -- whose titles carry no AI keyword and name
+    # no entity already in the dictionary (e.g. a brand-new model). llm_extract only touches kind
+    # news/discussion, so the GitHub (repo) and Hugging Face (model/paper) confinement above survives.
+    for sid, extra in llm_extract(stories, rec).items():
+        mentions[sid] |= extra
+
+    # Confine specific single-project release feeds to their own project node. Their release notes
+    # name supported models/hardware (NVIDIA, DeepSeek, Qwen...) and route to concepts (china-ai),
+    # which is noise on those nodes. After llm_extract (release items are kind=="news", which it
+    # processes) so the override is not re-polluted; before the gate (the project entity keeps them).
+    RELEASE_CONFINE = {"Strata (releases)": "strata", "Project Maya (releases)": "project-maya"}
+    for s in stories:
+        tgt = RELEASE_CONFINE.get(s.get("source"))
+        if tgt and tgt in rec.ents:
+            mentions[s["id"]] = {tgt}
+
     # "AI-specific" entity: not just a big-tech name ("Apple"/"Amazon") or a generic concept.
     def ai_specific(e):
         return e not in NOT_AI_SPECIFIC and rec.ents[e]["type"] != "Concept" or e in AI_CONCEPTS
@@ -387,18 +405,6 @@ def main():
     stories = [s for s in stories if not needs_ai_filter(s) or ai_relevant(s)]
     print(f"Kept {len(stories)} of {before} stories after AI-relevance gate "
           f"(Hacker News + general-interest feeds)")
-    for sid, extra in llm_extract(stories, rec).items():
-        mentions[sid] |= extra
-
-    # Confine specific single-project release feeds to their own project node. Their release notes
-    # name supported models/hardware (NVIDIA, DeepSeek, Qwen...) and route to concepts (china-ai),
-    # which is noise on those nodes. Done here, after llm_extract, because release items are
-    # kind=="news" (which llm_extract processes) so an earlier override would be re-polluted.
-    RELEASE_CONFINE = {"Strata (releases)": "strata", "Project Maya (releases)": "project-maya"}
-    for s in stories:
-        tgt = RELEASE_CONFINE.get(s.get("source"))
-        if tgt and tgt in rec.ents:
-            mentions[s["id"]] = {tgt}
 
     breaking = breaking_stats(stories, mentions, now)
     hist = json.load(open(HISTORY)) if os.path.exists(HISTORY) else {"runs": [], "entities": {}}

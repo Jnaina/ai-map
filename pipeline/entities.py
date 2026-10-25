@@ -462,7 +462,10 @@ def llm_extract(stories, rec, log=print, batch=40):
         return {}
     key = os.environ.get("AIMAP_LLM_API_KEY", "none")
     extra = {}
-    news = [s for s in stories if s["kind"] == "news" or (s["kind"] == "discussion" and AI_RX.search(s["title"]))]
+    # Process every news item AND every discussion item (all of Hacker News, incl. low-score front-page
+    # posts). The LLM then rescues AI stories whose titles carry no keyword and name no known entity
+    # (e.g. a brand-new model), and its answer feeds the AI-relevance gate in build.py.
+    news = [s for s in stories if s["kind"] in ("news", "discussion")]
     # cache: story id -> [[name, type], ...]; reuse earlier answers, only send new headlines
     cache_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "llm-cache.json")
     try:

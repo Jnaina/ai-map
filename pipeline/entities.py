@@ -254,6 +254,20 @@ SEED = [
                                   "agent scaffold(?:ing|s)?", "agentic scaffold(?:ing|s)?", "LLM harness(?:es)?",
                                   "Harness[2²]"], None),  # incl. Google's Harness2/Harness² product (no space -> skips "test harness 2.0")
     ("Reasoning models", "Concept", ["reasoning models?", "chain[- ]of[- ]thought"], None),
+    # Model architectures, incl. a catch-all ("model/neural architectures") so emerging, as-yet-unnamed
+    # ones are captured (e.g. NCM / Next-Concept Modeling). AI-specific terms only -- this IS added to
+    # AI_CONCEPTS in build.py, so a match marks a story AI-relevant; avoid bare acronyms that collide
+    # with non-AI meanings (e.g. require "MoE models", not bare "MoE" = Ministry of Education).
+    ("Model architecture", "Concept",
+     ["model architectures?", "neural architectures?", "novel (?:model |neural )?architectures?",
+      "new (?:model|neural) architectures?", "transformer (?:models?|architectures?|networks?)",
+      "(?:decoder|encoder)[- ]only transformers?", "vision transformers?", "\\bViT\\b",
+      "mixture[- ]of[- ]experts", "MoE (?:models?|architectures?|layers?)", "mixture[- ]of[- ]recursions",
+      "state[- ]space models?", "\\bMamba\\b", "linear attention", "sparse attention",
+      "sub[- ]?quadratic (?:attention|models?|architectures?)", "diffusion (?:language )?models?",
+      "\\bRWKV\\b", "RetNet", "retentive networks?", "liquid (?:neural )?networks?",
+      "world models?", "energy[- ]based models?", "next[- ]concept modeling", "\\bNCM\\b",
+      "large concept models?"], None),
     ("Open-weight models", "Concept", ["open[- ]weights?", "open[- ]source models?"], None),
     ("RAG", "Concept", ["RAG", "retrieval[- ]augmented"], None),
     ("AGI / superintelligence", "Concept", ["AGI", "superintelligence"], None),
@@ -268,6 +282,16 @@ SEED = [
     ("Export controls", "Concept", ["export controls?", "chip bans?", "sanctions?", "entity list",
                                     "(?:chip|semiconductor|GPU|AI[- ]chip) exports?", "smuggl(?:e|ed|ing)",
                                     "BIS (?:rule|ruling|licen[sc]e)"], None),
+    # Chip architecture: ISAs, packaging, process nodes. Cluster-only (NOT added to AI_CONCEPTS in
+    # build.py), so matching "x86"/"2nm"/"RISC-V" does NOT by itself make a story AI-relevant -- it
+    # only groups chip-architecture stories that are already AI-relevant via another signal, so
+    # general CPU/semiconductor news doesn't leak through the gate.
+    ("Chip architecture", "Concept",
+     ["RISC[- ]?V", "\\bx86(?:[- ]64)?\\b", "ARMv[0-9]+", "Arm (?:ISA|architecture)", "Neoverse",
+      "instruction[- ]set architectures?", "microarchitectures?", "chip architectures?",
+      "CoWoS", "advanced packaging", "(?:2\\.5D|3D)[- ]?packaging", "interposers?",
+      "gate[- ]all[- ]around", "GAAFET", "backside power(?:[- ]delivery)?", "EUV",
+      "process nodes?", "\\b[2357]nm\\b", "\\bN[2357]\\b", "die shrink", "chip stacking"], None),
     ("Coding agents", "Concept", ["coding agents?", "vibe coding", "AI coding"], None),
     ("Humanoid robots", "Concept", ["humanoids?", "robotics"], None),
     ("Video generation", "Concept", ["video generation", "text-to-video", "AI videos?"], None),

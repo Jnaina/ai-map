@@ -112,10 +112,48 @@ dialog h3{font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacin
 #mapHelp li{white-space:nowrap}
 #mapHelp b{color:var(--accent);font-weight:600}
 #mapHelp .close{pointer-events:auto}
+/* ============================================================================================
+   Incoming-feed HUD: a floating, semi-transparent ticker of the newest items, lower-left, above
+   the chrome. Deliberately MORE translucent than the menus (.52 fallback / .24 with blur vs the
+   menus' .78/.44) so the heat map reads through it. Items stream in at the top and push the rest
+   down; clicking one opens the article in a new tab.
+   ============================================================================================ */
+#feed{position:fixed;left:12px;bottom:58px;z-index:9;width:288px;max-width:calc(100vw - 24px);
+  max-height:calc(100vh - 230px);display:flex;flex-direction:column;
+  background:rgba(246,245,242,.52);border:1px solid var(--glass-border);border-radius:12px;
+  box-shadow:0 8px 30px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,.4)}
+.feed-chrome{position:absolute;inset:0;pointer-events:none}
+.feed-chrome i{position:absolute;width:11px;height:11px;border:1.5px solid var(--accent);opacity:.8}
+.feed-chrome i:nth-child(1){top:-1px;left:-1px;border-right:0;border-bottom:0;border-top-left-radius:12px}
+.feed-chrome i:nth-child(2){top:-1px;right:-1px;border-left:0;border-bottom:0;border-top-right-radius:12px}
+.feed-chrome i:nth-child(3){bottom:-1px;left:-1px;border-right:0;border-top:0;border-bottom-left-radius:12px}
+.feed-chrome i:nth-child(4){bottom:-1px;right:-1px;border-left:0;border-top:0;border-bottom-right-radius:12px}
+.feed-head{display:flex;align-items:center;gap:7px;padding:8px 12px 7px;position:relative}
+.feed-head::after{content:"";position:absolute;left:10px;right:10px;bottom:0;height:1px;
+  background:linear-gradient(90deg,var(--accent),rgba(255,74,28,.15) 55%,transparent)}
+.feed-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:feedpulse 2s ease-out infinite}
+@keyframes feedpulse{0%{box-shadow:0 0 0 0 rgba(255,74,28,.55)}100%{box-shadow:0 0 0 7px rgba(255,74,28,0)}}
+.feed-title{font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:var(--mid)}
+.feed-list{list-style:none;margin:0;padding:5px 6px 8px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.feed-list::-webkit-scrollbar{width:0;height:0}
+.feed-item{display:block;padding:7px 8px;border-radius:7px;text-decoration:none;color:var(--ink);
+  border-left:2px solid transparent;transition:background .15s ease,border-color .15s ease}
+.feed-list li + li{margin-top:1px;border-top:1px dashed rgba(29,29,29,.09)}
+.feed-item:hover{background:rgba(255,255,255,.4);border-left-color:var(--accent)}
+.feed-item .ft{font-size:12px;line-height:1.32;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.feed-item:hover .ft{text-decoration:underline;text-underline-offset:2px}
+.feed-item .fs{display:block;margin-top:3px;font-size:10px;color:var(--mid);letter-spacing:.3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* a genuinely new item streams in at the top and flashes once */
+@keyframes feedin{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+@keyframes feedflash{0%{background:var(--accent-soft)}100%{background:transparent}}
+.feed-item.is-new{animation:feedin .45s ease,feedflash 2.4s ease}
+
 /* Where backdrop-filter is supported (all current Chrome/Edge/Safari/Firefox), make the chrome
    truly translucent and blur the map behind it; otherwise the near-opaque --glass-solid stands in. */
 @supports ((backdrop-filter:blur(2px)) or (-webkit-backdrop-filter:blur(2px))){
   #bar,.chips,#legend{background:var(--glass);-webkit-backdrop-filter:blur(16px) saturate(1.3);backdrop-filter:blur(16px) saturate(1.3)}
+  #feed{background:rgba(246,245,242,.24);-webkit-backdrop-filter:blur(13px) saturate(1.25);backdrop-filter:blur(13px) saturate(1.25)}
 }
 @media (max-width:760px){
   /* mobile: revert to the original full-bleed solid bars (no floating glass) to avoid layout breakage */
@@ -125,6 +163,7 @@ dialog h3{font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacin
   #search{width:140px}
   #panel{top:auto;left:10px;right:10px;bottom:10px;width:auto;max-height:62vh}
   #legend{display:none}
+  #feed{display:none}  /* the lower-left HUD is a desktop affordance; hidden on small screens */
 }
 
 /* "Fresh data" pill — shown when a newer backend build arrives while the viewer is actively

@@ -460,6 +460,31 @@
       el.hidden = true;
     }
   }
+
+  // ---- Incoming-feed HUD (lower-left): the newest items, streamed from new_counts.latest (which
+  //      the page already polls every 90s). New items appear at the top and push the rest down;
+  //      the list holds at most FEED_MAX. Clicking an item opens the article in a new tab.
+  const FEED_MAX = 10;
+  let feedUrls = [];        // urls currently shown, top -> bottom
+  let firstFeed = true;     // first paint shouldn't flash every item as "new"
+  function renderFeed(latest) {
+    const list = $("#feedList"), wrap = $("#feed");
+    if (!list || !wrap) return;
+    if (!Array.isArray(latest) || !latest.length) return;   // older build without `latest`: leave as-is
+    const items = latest.filter((it) => it && it.url && it.title).slice(0, FEED_MAX);
+    if (!items.length) return;
+    const order = items.map((it) => it.url);
+    wrap.hidden = false;
+    if (order.length === feedUrls.length && order.every((u, i) => u === feedUrls[i])) return; // unchanged
+    const prev = new Set(feedUrls);  // the build we were showing; after the first paint, anything not in it is new
+    list.innerHTML = items.map((it) => {
+      const fresh = !firstFeed && !prev.has(it.url);  // first paint: show the list without flashing every row
+      return `<li><a class="feed-item${fresh ? " is-new" : ""}" href="${esc(it.url)}" target="_blank" rel="noopener">`
+        + `<span class="ft">${esc(it.title)}</span><span class="fs">${esc(it.source || "")}</span></a></li>`;
+    }).join("");
+    feedUrls = order;
+    firstFeed = false;
+  }
   async function fetchCounts() {
     try { return await (await fetch("data/new_counts.json", { cache: "no-store" })).json(); }
     catch (e) { return null; }
@@ -493,7 +518,7 @@
       svg.style("opacity", 0).transition().duration(300).style("opacity", 1);
       applying = false; pending = false;
       hidePill();
-      fetchCounts().then(setNewCount);   // refresh the "+N new" tally
+      fetchCounts().then((nc) => { setNewCount(nc); renderFeed(nc && nc.latest); }); // refresh tally + feed
     }, 240);
   }
 
@@ -502,6 +527,7 @@
     const nc = await fetchCounts();
     if (!nc) return;
     setNewCount(nc);                     // keep the tally live regardless
+    renderFeed(nc.latest);               // stream any new items into the lower-left HUD
     const token = nc.generated_at;
     if (!token) return;
     latestSeenToken = token;
@@ -524,7 +550,7 @@
   buildGraph();
   lastToken = data.generated_at;
   // initial "+N new" tally, and adopt the live freshness token so the first real build is detected
-  fetchCounts().then((nc) => { setNewCount(nc); if (nc && nc.generated_at) lastToken = latestSeenToken = nc.generated_at; });
+  fetchCounts().then((nc) => { setNewCount(nc); renderFeed(nc && nc.latest); if (nc && nc.generated_at) lastToken = latestSeenToken = nc.generated_at; });
 
   setInterval(poll, POLL_MS);
   // check more often whether a pending update can now be applied silently (viewer went idle)

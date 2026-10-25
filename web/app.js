@@ -467,6 +467,19 @@
   const FEED_MAX = 10;
   let feedUrls = [];        // urls currently shown, top -> bottom
   let firstFeed = true;     // first paint shouldn't flash every item as "new"
+  // compact relative time from a unix-seconds timestamp (when the item was first discovered)
+  const relShort = (sec) => {
+    const s = Date.now() / 1000 - (+sec || 0);
+    if (!sec || s < 0) return "";
+    if (s < 60) return "now";
+    if (s < 3600) return `${Math.round(s / 60)}m ago`;
+    if (s < 86400) return `${Math.round(s / 3600)}h ago`;
+    return `${Math.round(s / 86400)}d ago`;
+  };
+  // refresh just the age labels in place (no rebuild, no flashing), so times stay live between polls
+  function refreshFeedTimes() {
+    document.querySelectorAll("#feedList .fage").forEach((e) => { e.textContent = relShort(e.dataset.ts); });
+  }
   function renderFeed(latest) {
     const list = $("#feedList"), wrap = $("#feed");
     if (!list || !wrap) return;
@@ -475,15 +488,17 @@
     if (!items.length) return;
     const order = items.map((it) => it.url);
     wrap.hidden = false;
-    if (order.length === feedUrls.length && order.every((u, i) => u === feedUrls[i])) return; // unchanged
+    if (order.length === feedUrls.length && order.every((u, i) => u === feedUrls[i])) { refreshFeedTimes(); return; }
     const prev = new Set(feedUrls);  // the build we were showing; after the first paint, anything not in it is new
     list.innerHTML = items.map((it) => {
       const fresh = !firstFeed && !prev.has(it.url);  // first paint: show the list without flashing every row
       return `<li><a class="feed-item${fresh ? " is-new" : ""}" href="${esc(it.url)}" target="_blank" rel="noopener">`
-        + `<span class="ft">${esc(it.title)}</span><span class="fs">${esc(it.source || "")}</span></a></li>`;
+        + `<span class="ft">${esc(it.title)}</span>`
+        + `<span class="fs">${esc(it.source || "")}<span class="fage" data-ts="${+it.first_seen || 0}"></span></span></a></li>`;
     }).join("");
     feedUrls = order;
     firstFeed = false;
+    refreshFeedTimes();
   }
   async function fetchCounts() {
     try { return await (await fetch("data/new_counts.json", { cache: "no-store" })).json(); }
@@ -555,6 +570,8 @@
   setInterval(poll, POLL_MS);
   // check more often whether a pending update can now be applied silently (viewer went idle)
   setInterval(() => { if (pending && !applying && isIdle()) applyUpdate(); }, 3000);
+  // keep the incoming-feed age labels ("5m ago") ticking even when no new build has arrived
+  setInterval(refreshFeedTimes, 30000);
   // re-check promptly when the tab regains focus
   document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
 })();

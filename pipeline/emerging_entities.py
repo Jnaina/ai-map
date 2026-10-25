@@ -26,6 +26,23 @@ import entities  # noqa: E402
 
 LLM_CACHE = os.path.join(ROOT, "data", "llm-cache.json")
 DB = os.path.join(ROOT, "data", "articles.db")
+NTFY_URL = os.environ.get("AIMAP_NTFY_URL", "https://ntfy.sh/jag_alerts")
+
+
+def ntfy(title, body, priority="default", tags="bulb"):
+    """POST a notification to the ntfy topic (same channel as feed_alert.py). Best-effort."""
+    import urllib.request
+    if os.environ.get("AIMAP_ALERTS") == "off":
+        print(f"[emerging] AIMAP_ALERTS=off; would send: {title!r}")
+        return False
+    headers = {"Title": title, "Priority": priority, "Tags": tags}
+    try:
+        req = urllib.request.Request(NTFY_URL, data=body.encode("utf-8"), headers=headers, method="POST")
+        urllib.request.urlopen(req, timeout=10).read()
+        return True
+    except Exception as e:
+        print(f"[emerging] ntfy send failed: {e}")
+        return False
 
 # Generic terms the LLM is told to ignore but occasionally emits; never worth curating as a node.
 STOP = {"ai", "a.i.", "llm", "llms", "ml", "model", "models", "api", "apis", "gpu", "gpus", "cpu",
@@ -86,6 +103,7 @@ def main():
     ap.add_argument("--min-stories", type=int, default=2, help="minimum distinct stories to list a name")
     ap.add_argument("--top", type=int, default=40)
     ap.add_argument("--json", default=None, help="also write the ranked rows to this JSON file")
+    ap.add_argument("--ntfy", action="store_true", help="also push a short digest to ntfy (weekly use)")
     a = ap.parse_args()
 
     if not os.path.exists(LLM_CACHE):
@@ -143,18 +161,19 @@ def main():
             maps_to=near, status=("alias of " + near[0] if near else "NEW"),
             last_seen=datetime.fromtimestamp(e["last"], timezone.utc).strftime("%Y-%m-%d"),
             examples=e["titles"]))
-    # brand-new entities first (highest curation value), then by story count
+    # brand-new entities first (highest curation value), then by story count. `rows` is the full
+    # candidate list (used for the ntfy digest); `shown` is the capped slice printed to the console.
     rows.sort(key=lambda r: (bool(r["maps_to"]), -r["stories"], -r["engagement"]))
-    rows = rows[: a.top]
+    shown = rows[: a.top]
 
     print(f"\nEmerging entities — extracted by the LLM, not yet in the dictionary "
           f"(last {a.days} days, >= {a.min_stories} stories)\n")
-    if not rows:
-        print("  (none — the dictionary is covering everything the LLM finds)\n");
+    if not shown:
+        print("  (none — the dictionary is covering everything the LLM finds)\n")
     else:
         print(f"  {'#st':>3}  {'type':<11} {'name':<24} {'last':<10} {'curate as':<18} top source")
         print(f"  {'-'*3}  {'-'*11} {'-'*24} {'-'*10} {'-'*18} {'-'*16}")
-        for r in rows:
+        for r in shown:
             print(f"  {r['stories']:>3}  {r['type']:<11} {r['name'][:24]:<24} {r['last_seen']:<10} "
                   f"{r['status'][:18]:<18} {r['top_source'][:16]}")
         new_n = sum(1 for r in rows if not r["maps_to"])
@@ -166,8 +185,25 @@ def main():
           f"to {len(curated_hit)} dictionary entities)\n")
 
     if a.json:
-        json.dump(rows, open(a.json, "w"), indent=2)
+        json.dump(shown, open(a.json, "w"), indent=2)
         print(f"  wrote {a.json}\n")
+
+    if a.ntfy and rows:
+        new = [r for r in rows if not r["maps_to"]]
+        var = [r for r in rows if r["maps_to"]]
+        lines = [f"Last {a.days}d · extracted by the LLM, not in the dictionary", ""]
+        if new:
+            lines.append("NEW — add as entities:")
+            lines += [f"• {r['name']} ({r['type']}, {r['stories']})" for r in new[:12]]
+        if var:
+            lines.append("")
+            lines.append("Variants — fold in as alias:")
+            lines += [f"• {r['name']} → {r['maps_to'][0]}" for r in var[:8]]
+        title = f"AI Map: {len(new)} new + {len(var)} variant entities to curate"
+        ok = ntfy(title, "\n".join(lines), tags="bulb")
+        print(f"  ntfy digest {'sent' if ok else 'NOT sent'} ({len(new)} new, {len(var)} variants)\n")
+    elif a.ntfy:
+        print("  ntfy: nothing to report; no push sent\n")
 
 
 if __name__ == "__main__":

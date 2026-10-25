@@ -52,6 +52,13 @@ async function ipHash(ip, salt) {
 
 export async function onRequest(context) {
   const { request, env, next, waitUntil } = context;
+  // Google Search Console HTML-file verification: serve the token verbatim with a 200 at the exact
+  // .html URL. Pages otherwise 308-redirects *.html to its extensionless path, and GSC's file check
+  // can reject a redirect. Short-circuit before next() so no redirect is ever produced.
+  if (request.method === "GET" && new URL(request.url).pathname === "/google7b26fcff0836be29.html") {
+    return new Response("google-site-verification: google7b26fcff0836be29.html",
+      { headers: { "content-type": "text/html; charset=utf-8" } });
+  }
   const res = await next();
   try {
     if (!env.DB || request.method !== "GET") return res;

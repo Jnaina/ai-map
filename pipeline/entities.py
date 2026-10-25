@@ -392,6 +392,21 @@ GENERIC = {"llm", "llms", "ai", "gpu", "gpus", "cpu", "linux", "git", "rust", "p
            "model", "models", "agent", "agents", "api", "chatbot", "internet", "web", "cloud", "aws"}
 
 
+CURATION_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "curation.json")
+
+
+def load_curation(path=CURATION_PATH):
+    """Human curation overlay on top of SEED, written by the curator web app (curator/app.py):
+    `added` = approved new entities, `removed` = SEED/added slugs to drop, `dismissed` = ignored
+    recommendations (app-only). Best-effort: a missing or malformed file leaves SEED untouched."""
+    try:
+        d = json.load(open(path))
+        return {"added": d.get("added") or [], "removed": set(d.get("removed") or []),
+                "aliases": d.get("aliases") or {}, "dismissed": set(d.get("dismissed") or [])}
+    except Exception:
+        return {"added": [], "removed": set(), "aliases": {}, "dismissed": set()}
+
+
 class Recogniser:
     def __init__(self):
         self.ents = {}  # id -> {label,type,parent,seed}
@@ -402,6 +417,37 @@ class Recogniser:
             flags = re.IGNORECASE if typ == "Concept" else 0
             pat = r"(?<![\w.-])(?:" + "|".join(aliases) + r")(?![\w-])"
             self.rx.append((re.compile(pat, flags), eid))
+        # Human curation overlay: add approved entities (aliases treated as literals), drop removed ones.
+        cur = load_curation()
+        for e in cur["added"]:
+            label = (e.get("label") or e.get("name") or "").strip()
+            if not label:
+                continue
+            typ = e.get("type") if e.get("type") in TYPES else "Product"
+            eid = slug(label)
+            parent = e.get("parent")
+            self.ents[eid] = dict(label=label, type=typ,
+                                  parent=slug(parent) if parent else None, seed=False)
+            aliases = [a for a in (e.get("aliases") or [label]) if a]
+            pat = r"(?<![\w.-])(?:" + "|".join(re.escape(a) for a in aliases) + r")(?![\w-])"
+            try:
+                self.rx.append((re.compile(pat, re.IGNORECASE if typ == "Concept" else 0), eid))
+            except re.error:
+                pass
+        # Extra aliases the curator attached to an existing node (e.g. "Claude Duet" -> claude).
+        for eid, extra in (cur.get("aliases") or {}).items():
+            extra = [a for a in extra if a]
+            if eid not in self.ents or not extra:
+                continue
+            pat = r"(?<![\w.-])(?:" + "|".join(re.escape(a) for a in extra) + r")(?![\w-])"
+            try:
+                self.rx.append((re.compile(pat, re.IGNORECASE if self.ents[eid]["type"] == "Concept" else 0), eid))
+            except re.error:
+                pass
+        if cur["removed"]:
+            for rid in cur["removed"]:
+                self.ents.pop(rid, None)
+            self.rx = [(rx, eid) for rx, eid in self.rx if eid not in cur["removed"]]
         self.model_rx = [(re.compile(p), slug(parent)) for p, parent in MODEL_PATTERNS]
         self.amb_model_rx = [(re.compile(p), slug(par), fam, desc) for p, par, fam, desc in AMBIGUOUS_MODEL_PATTERNS]
         self.ambiguous_hits = {}  # story id -> {eid: {"parent","family","desc"}} for bare-model matches

@@ -97,29 +97,25 @@ def load_meta(con, days):
     return meta
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--days", type=int, default=14, help="only stories first seen in the last N days")
-    ap.add_argument("--min-stories", type=int, default=2, help="minimum distinct stories to list a name")
-    ap.add_argument("--top", type=int, default=40)
-    ap.add_argument("--json", default=None, help="also write the ranked rows to this JSON file")
-    ap.add_argument("--ntfy", action="store_true", help="also push a short digest to ntfy (weekly use)")
-    a = ap.parse_args()
-
+def compute(days=14, min_stories=2):
+    """Core report, reusable by the CLI and the curator web app. Returns (rows, curated_hit) where
+    rows is the full sorted candidate list (brand-new first) and curated_hit is a Counter of names the
+    dictionary already covers. Honours the curation overlay's `dismissed` set (hides those names)."""
     if not os.path.exists(LLM_CACHE):
-        print("no llm-cache.json yet (LLM extraction has not run)"); return
+        return [], Counter()
     cache = json.load(open(LLM_CACHE))
     rec, seed_ids = curated()
+    dismissed = entities.load_curation().get("dismissed", set())
     con = sqlite3.connect(DB)
-    meta = load_meta(con, a.days)
-    cutoff = int(time.time()) - a.days * 86400
+    meta = load_meta(con, days)
+    cutoff = int(time.time()) - days * 86400
 
     agg = {}
-    curated_hit = Counter()  # slug -> count, for a one-line "already covered" sanity figure
+    curated_hit = Counter()
     for story_id, ents in cache.items():
         m = meta.get(story_id)
         if not m:
-            continue  # can't date/attribute it (aged out of the 90-day DB, or stale cache entry)
+            continue
         when = m["first_seen"] or m["published"]
         if not when or when < cutoff:
             continue
@@ -134,7 +130,7 @@ def main():
                 curated_hit[entities.slug(name)] += 1
                 continue
             key = entities.slug(name)
-            if not key:
+            if not key or key in dismissed:
                 continue
             e = agg.setdefault(key, dict(forms=Counter(), types=Counter(), stories=set(),
                                          titles=[], sources=Counter(), eng=0, last=0))
@@ -151,19 +147,30 @@ def main():
     rows = []
     for key, e in agg.items():
         n = len(e["stories"])
-        if n < a.min_stories:
+        if n < min_stories:
             continue
         nm = e["forms"].most_common(1)[0][0]
         near = near_entities(rec, nm)
         rows.append(dict(
             name=nm, slug=key, type=e["types"].most_common(1)[0][0], stories=n, engagement=e["eng"],
-            top_source=e["sources"].most_common(1)[0][0],
+            top_source=e["sources"].most_common(1)[0][0], aliases=sorted(e["forms"]),
             maps_to=near, status=("alias of " + near[0] if near else "NEW"),
             last_seen=datetime.fromtimestamp(e["last"], timezone.utc).strftime("%Y-%m-%d"),
             examples=e["titles"]))
-    # brand-new entities first (highest curation value), then by story count. `rows` is the full
-    # candidate list (used for the ntfy digest); `shown` is the capped slice printed to the console.
     rows.sort(key=lambda r: (bool(r["maps_to"]), -r["stories"], -r["engagement"]))
+    return rows, curated_hit
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--days", type=int, default=14, help="only stories first seen in the last N days")
+    ap.add_argument("--min-stories", type=int, default=2, help="minimum distinct stories to list a name")
+    ap.add_argument("--top", type=int, default=40)
+    ap.add_argument("--json", default=None, help="also write the ranked rows to this JSON file")
+    ap.add_argument("--ntfy", action="store_true", help="also push a short digest to ntfy (weekly use)")
+    a = ap.parse_args()
+
+    rows, curated_hit = compute(a.days, a.min_stories)
     shown = rows[: a.top]
 
     print(f"\nEmerging entities — extracted by the LLM, not yet in the dictionary "

@@ -157,7 +157,7 @@
     select(d);
   }
 
-  // Lazy-loaded flat list of the 30-day article archive, so search can surface news for entities
+  // Lazy-loaded flat list of the 90-day article archive, so search can surface news for entities
   // that aren't big enough to be nodes on the map. Fetched once per build (cleared on live update).
   async function getArchive() {
     if (archive) return archive;
@@ -221,12 +221,12 @@
     $("#panelBody").innerHTML = `
       <h2>“${esc(query)}”</h2>
       <div class="badges"><span>search · not on the map</span></div>
-      ${top.length ? `<p class="meta">${hits.length} article${hits.length === 1 ? "" : "s"} in the last 30 days with “${esc(query)}” in the headline${hits.length > top.length ? ` · showing ${top.length}` : ""}</p>
+      ${top.length ? `<p class="meta">${hits.length} article${hits.length === 1 ? "" : "s"} in the last 90 days with “${esc(query)}” in the headline${hits.length > top.length ? ` · showing ${top.length}` : ""}</p>
       <h3>Headlines</h3>
       <ul class="stories">${top.map((s) => `
         <li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>
         <div class="meta">${esc(s.source)} · ${ago(s.published)}${s.discussion ? ` · <a href="${esc(s.discussion)}" target="_blank" rel="noopener">discussion</a>` : ""}</div></li>`).join("")}</ul>`
-      : `<p class="meta">No headlines in the last 30 days mention “${esc(query)}”. It may not have appeared in the sources yet — the archive covers headlines, so very new or niche entities can be missing.</p>`}`;
+      : `<p class="meta">No headlines in the last 90 days mention “${esc(query)}”. It may not have appeared in the sources yet — the archive covers headlines, so very new or niche entities can be missing.</p>`}`;
     $("#panel").hidden = false;
   }
 
@@ -418,7 +418,7 @@
       // 1) an entity that's on the map -> focus its node (reveal it if a filter is hiding it)
       const d = nodes.find((n) => n.label.toLowerCase() === q) || nodes.find((n) => n.label.toLowerCase().includes(q));
       if (d) { if (!visible(d)) { activeTypes.add(d.type); $("#status").value = "all"; applyFilters(); } focusNode(d); return; }
-      // 2) not on the map -> surface matching news from the 30-day archive
+      // 2) not on the map -> surface matching news from the 90-day archive
       const hits = (await getArchive()).filter((a) => a.title.toLowerCase().includes(q));
       renderSearchPanel(raw, hits);
     });
@@ -555,7 +555,7 @@
       if (oldSvg) oldSvg.remove();
       if (oldTip) oldTip.remove();
       data = nd;
-      archive = null;                    // the 30-day archive may have moved on too
+      archive = null;                    // the 90-day archive may have moved on too
       buildGraph({ transform: savedT });
       svg.style("opacity", 0).transition().duration(300).style("opacity", 1);
       applying = false; pending = false;

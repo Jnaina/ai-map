@@ -1,4 +1,4 @@
-// Articles page: read web/data/articles.json (last 30 days, grouped by source),
+// Articles page: read web/data/articles.json (last 90 days, grouped by source),
 // show sources as tabs on the left and their articles on the right.
 "use strict";
 

@@ -420,7 +420,7 @@ def main():
     except Exception as e:
         print(f"[content-sig] skipped: {e}")
 
-    # Archive every link that fed the map into SQLite, then export the last 30 days
+    # Archive every link that fed the map into SQLite, then export the last 90 days
     # for the Articles page. Never let this break the map build.
     try:
         articles_db.record(stories)

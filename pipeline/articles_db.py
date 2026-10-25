@@ -1,9 +1,9 @@
-"""Persist every discovered link to SQLite and export a 30-day feed for the web UI.
+"""Persist every discovered link to SQLite and export a 90-day feed for the web UI.
 
-The build only fetches the last 7 days, but we want a rolling 30-day archive of the
+The build only fetches the last 7 days, but we want a rolling 90-day archive of the
 articles that fed the heat map. So each run records all of this run's stories into
 `data/articles.db` (de-duplicated by URL, accumulating over time), then exports the
-last 30 days to `web/data/articles.json` for the static Articles page to read.
+last 90 days to `web/data/articles.json` for the static Articles page to read.
 
 Standard library only (sqlite3), to match the rest of the pipeline.
 """
@@ -22,8 +22,8 @@ DB_PATH = os.path.join(ROOT, "data", "articles.db")
 EXPORT_PATH = os.path.join(ROOT, "web", "data", "articles.json")
 NEW_COUNTS_PATH = os.path.join(ROOT, "web", "data", "new_counts.json")
 FAVICON_DIR = os.path.join(ROOT, "web", "assets", "favicons")
-EXPORT_DAYS = 30
-# Sources exempt from the 30-day display window: their full recorded history is always
+EXPORT_DAYS = 90
+# Sources exempt from the 90-day display window: their full recorded history is always
 # exported. Added 2026-10-19 so the sparse Anthropic feeds (no official RSS; mirrors hold
 # only ~10-26 items) keep their one-off backfilled history instead of aging out.
 FULL_HISTORY_SOURCES = {"Anthropic", "Anthropic Engineering"}

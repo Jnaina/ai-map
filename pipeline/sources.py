@@ -289,6 +289,39 @@ DOMAIN_ENTITY = {
 }
 
 
+# Query params that identify *how you arrived* at a page, not *which* page it is. Newsletter and
+# analytics feeds bolt these onto the same article over and over (Fast Company's email feed re-sends
+# a story for days, each time with a fresh position=/campaign_date=, so the URL — our dedup key —
+# changes and the archive fills with dupes). Strip them so every variant collapses to one canonical
+# URL. Denylist, not allowlist: many sites carry a real article id in the query (?p=, ?id=, ?v=),
+# so we only drop params we're sure are tracking. Anything starting "utm_" goes regardless.
+TRACKING_PARAMS = {
+    "position", "partner", "campaign", "campaign_date", "newsletter", "ref", "ref_src", "ref_url",
+    "referrer", "source", "cmpid", "ncid", "fbclid", "gclid", "dclid", "gbraid", "wbraid", "msclkid",
+    "yclid", "igshid", "igsh", "mc_cid", "mc_eid", "_hsenc", "_hsmi", "hsctatracking", "spm", "scm",
+    "vero_id", "vero_conv", "oly_anon_id", "oly_enc_id", "guccounter", "guce_referrer",
+    "guce_referrer_sig", "sr_share", "cmp", "at_medium", "at_campaign",
+}
+
+
+def canonical_url(url):
+    """Drop tracking query params (and the fragment) so the same article has one stable URL.
+    Keeps non-tracking params and ordering of what remains; returns the input unchanged on error."""
+    if not url:
+        return url
+    try:
+        parts = urllib.parse.urlsplit(url)
+        if not parts.query:
+            kept_q = ""
+        else:
+            kept = [(k, v) for (k, v) in urllib.parse.parse_qsl(parts.query, keep_blank_values=True)
+                    if not k.lower().startswith("utm_") and k.lower() not in TRACKING_PARAMS]
+            kept_q = urllib.parse.urlencode(kept)
+        return urllib.parse.urlunsplit((parts.scheme, parts.netloc, parts.path, kept_q, ""))
+    except Exception:
+        return url
+
+
 def domain_entity(url):
     """Owning-company entity slug for a URL on a company's own site, else None (suffix match,
     so a subdomain like www.anthropic.com still resolves). See DOMAIN_ENTITY."""
@@ -453,6 +486,7 @@ def fetch_rss(name, url, weight, since, log):
             link = (it.findtext("link") or "").strip()
             date = _parse_date(it.findtext("pubDate") or it.findtext(f"{dc}date"))
             summary = it.findtext("description") or ""
+        link = canonical_url(link)   # strip newsletter/tracking params so re-sends dedup to one URL
         if not title or not date or date < since:
             continue
         # A future pubDate (e.g. a scraper that only knows the month and stamps it to the last day
@@ -499,7 +533,7 @@ def fetch_hn(since, log, min_points=30, early_points=10, early_hours=3):
             if pts <= min_points and now - created > early_hours * 3600:
                 continue
             title = h.get("title") or ""
-            url = h.get("url") or f"https://news.ycombinator.com/item?id={h.get('objectID')}"
+            url = canonical_url(h.get("url")) or f"https://news.ycombinator.com/item?id={h.get('objectID')}"
             out.append(dict(id=f"hn:{h.get('objectID')}", title=title, url=url, source="Hacker News",
                             kind="discussion", published=h.get("created_at_i", 0),
                             engagement=h.get("points") or 0, weight=1.0, text=title,

@@ -255,6 +255,20 @@
     svg.call(zoom.transform, t);
   }
 
+  // Footer stats: the per-view window count (last 7 days / 24 h) plus the growing archive total that
+  // the search box covers. archiveTotal arrives via new_counts.json (polled), so it's appended once
+  // available and refreshed in place by setNewCount — no full rebuild needed.
+  let archiveTotal = null;
+  function footerStats() {
+    const win = (data.window_hours <= 24) ? "last 24 hours" : "last 7 days";
+    const n = (data.story_count || 0).toLocaleString();
+    let s = `<span title="AI-relevant stories published in the ${win} — what this view is built from">${n} stories · ${win}</span>`;
+    if (archiveTotal != null) {
+      s += ` · <span title="Every AI-relevant story collected so far; the search box looks across all of these">${archiveTotal.toLocaleString()} searchable</span>`;
+    }
+    return s;
+  }
+
   // ============================================================================================
   //  Build (or rebuild) the whole graph from the current `data`. On a live update, opts.transform
   //  carries the viewer's current pan/zoom so the view doesn't jump.
@@ -285,7 +299,7 @@
     document.querySelector(".tag").textContent = view === "today" ? "what's hot in AI right now · last 24 hours" : "what's heating up in AI · last 7 days";
     $("#legTrend").textContent = `↑ rising · ↓ cooling (vs ${lag} h ago)`;
     const nBreaking = nodes.filter((n) => n.breaking || n.surging).length;
-    $("#updated").innerHTML = `updated ${esc(ago(data.generated_at))} · ${data.story_count} stories · refreshes hourly`
+    $("#updated").innerHTML = `updated ${esc(ago(data.generated_at))} · <span id="upStats">${footerStats()}</span> · refreshes hourly`
       + (nBreaking ? ` · <button id="breakingBtn" class="linklike" title="Show the breaking entities">${nBreaking} breaking</button>` : "");
     if (nBreaking) $("#breakingBtn").addEventListener("click", renderBreakingPanel);
     $("#hl").textContent = data.half_life_hours;
@@ -454,6 +468,11 @@
   }
 
   function setNewCount(nc) {
+    if (nc && typeof nc.archive_total === "number") {
+      archiveTotal = nc.archive_total;
+      const st = $("#upStats");
+      if (st && typeof data !== "undefined" && data) st.innerHTML = footerStats();  // refresh in place
+    }
     const el = $("#newcount");
     if (!el) return;
     if (nc && nc.new_last_hour > 0) {

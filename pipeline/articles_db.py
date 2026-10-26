@@ -160,6 +160,13 @@ def write_new_counts(db_path=DB_PATH, out_path=NEW_COUNTS_PATH, window_s=3600,
     now = int(time.time())
     conn = connect(db_path)
     n = conn.execute("SELECT COUNT(*) FROM articles WHERE first_seen >= ?", (now - window_s,)).fetchone()[0]
+    # Total AI-relevant stories the archive currently holds (same window the Articles page / search
+    # loads from articles.json: last EXPORT_DAYS plus the full-history sources). The map footer shows
+    # this as the growing "searchable" total, distinct from the per-view last-7-days story_count.
+    exempt = sorted(FULL_HISTORY_SOURCES)
+    ph = ",".join("?" * len(exempt))
+    q = "SELECT COUNT(*) FROM articles WHERE published >= ?" + (f" OR source IN ({ph})" if exempt else "")
+    archive_total = conn.execute(q, (now - EXPORT_DAYS * 86400, *exempt)).fetchone()[0]
     # Items for the on-map "Incoming feed" ticker (title + source + link), covering the last
     # `latest_window_s` (24 h), newest-discovered first. Capped at `latest_max` so the tiny
     # new_counts.json the page polls every 90s can't balloon on a busy day; the HUD scrolls through
@@ -175,6 +182,7 @@ def write_new_counts(db_path=DB_PATH, out_path=NEW_COUNTS_PATH, window_s=3600,
     ]
     conn.close()
     data = dict(new_last_hour=n, window_seconds=window_s, latest_window_seconds=latest_window_s,
+                archive_total=archive_total,
                 generated_at=datetime.fromtimestamp(now, timezone.utc).isoformat(timespec="minutes"),
                 latest=latest)
     os.makedirs(os.path.dirname(out_path), exist_ok=True)

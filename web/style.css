@@ -136,7 +136,7 @@ dialog h3{font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacin
 .feed-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:feedpulse 2s ease-out infinite}
 @keyframes feedpulse{0%{box-shadow:0 0 0 0 rgba(255,74,28,.55)}100%{box-shadow:0 0 0 7px rgba(255,74,28,0)}}
 .feed-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--mid)}
-.feed-list{list-style:none;margin:0;padding:3px 6px 5px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.feed-list{list-style:none;margin:0;padding:3px 6px 5px;flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
 .feed-list::-webkit-scrollbar{width:0;height:0}
 .feed-item{display:block;padding:4px 8px;border-radius:7px;text-decoration:none;color:var(--ink);
   border-left:2px solid transparent;transition:background .15s ease,border-color .15s ease}

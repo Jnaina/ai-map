@@ -87,6 +87,7 @@ button.ghost{background:transparent}
   max-width:calc(100vw - 24px);padding:8px 14px;
   background:var(--glass-solid);border:1px solid var(--glass-border);border-radius:14px;box-shadow:var(--glass-shadow)}
 #legend .acc{color:var(--accent)}
+#legend .byline{font-size:10px;opacity:.65;font-style:italic}
 /* clickable "N breaking" in the footer, and the breaking panel it opens */
 .linklike{font:inherit;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 .linklike:hover{opacity:.8}

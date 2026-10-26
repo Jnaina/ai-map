@@ -83,11 +83,11 @@ button.ghost{background:transparent}
 .conn{display:flex;flex-wrap:wrap;gap:4px 12px}
 .conn span{cursor:pointer;border-bottom:1px solid var(--faint)}
 .conn span:hover{border-color:var(--ink)}
-#legend{position:fixed;left:12px;bottom:12px;display:inline-flex;gap:18px;flex-wrap:wrap;color:var(--mid);font-size:11px;z-index:5;
+#legend{position:fixed;left:12px;right:12px;bottom:12px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;color:var(--mid);font-size:11px;z-index:5;
   max-width:calc(100vw - 24px);padding:8px 14px;
   background:var(--glass-solid);border:1px solid var(--glass-border);border-radius:14px;box-shadow:var(--glass-shadow)}
 #legend .acc{color:var(--accent)}
-#legend .byline{font-size:10px;opacity:.65;font-style:italic}
+#legend .byline{margin-left:auto;font-size:10px;opacity:.65;font-style:italic}
 /* clickable "N breaking" in the footer, and the breaking panel it opens */
 .linklike{font:inherit;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 .linklike:hover{opacity:.8}

@@ -31,6 +31,9 @@ SEED = [
     ("xAI", "Company", ["xAI"], None),
     ("Mistral AI", "Company", ["Mistral AI", "Mistral"], None),
     ("Cohere", "Company", ["Cohere"], None),
+    # "Recursive" the AI startup collides with the CS term and the "recursive self-improvement"
+    # research concept all over arXiv/HF, so it's LLM-disambiguated (AMBIGUOUS_ENTITIES) below.
+    ("Recursive", "Company", ["Recursive"], None),
     ("Hugging Face", "Company", ["Hugging Face", "HuggingFace"], None),
     ("DeepSeek", "Company", ["DeepSeek"], None),
     ("Alibaba (Qwen)", "Company", ["Alibaba"], None),
@@ -153,6 +156,10 @@ SEED = [
     ("FLUX", "Model", ["FLUX", "Flux\\.\\d"], "Black Forest Labs"),
     ("Stable Diffusion", "Model", ["Stable Diffusion"], "Stability AI"),
     ("Whisper", "Model", ["Whisper"], "OpenAI"),
+    # Recursive's open-weight local coding model. Bare "Flint" also disambiguated (Flint, Michigan /
+    # the Flint-interactive viz language). Its HF-trending upvotes reach this node via the carve-out
+    # in build.py (keyed on the hf_model slug "RecursiveSI/flint", "unsloth/flint-GGUF", ...).
+    ("Flint", "Model", ["Flint"], "Recursive"),
     ("gpt-oss", "Open source", ["gpt-oss"], "OpenAI"),
     # --- products
     ("ChatGPT", "Product", ["ChatGPT"], "OpenAI"),
@@ -605,7 +612,14 @@ AMBIGUOUS_ENTITIES = {
     "browser-use": ("browser-use, the open-source Python library/agent that lets an LLM control a web "
                     "browser (an AI 'browser agent') — NOT the generic phrase 'browser use' meaning how "
                     "people use web browsers, nor browser usage statistics/market share"),
-    "momenta": ("Momenta, a Chinese autonomous-driving (self-driving) company — NOT the physics / "
+    "recursive": ("Recursive (a.k.a. RecursiveSI), an AI startup building open-weight local models via "
+                  "recursive self-improvement — e.g. Flint, its coding model. NOT the computer-science "
+                  "term 'recursive' / 'recursion', and NOT the research concept 'recursive "
+                  "self-improvement (RSI)' as discussed generically in papers"),
+    "flint": ("Flint, Recursive's open-weight ~40B MoE local coding model for agents (RecursiveSI/flint "
+              "on Hugging Face) — NOT Flint, Michigan; NOT the Flint-interactive data-visualization "
+              "language; and NOT any other unrelated product named Flint"),
+    "momenta": ("Momenta, a Chinese autonomous-driving (self-driving) company — NOT the physics /"
                 "machine-learning term 'momenta' (plural of momentum, e.g. optimizer momenta)"),
     "terminus": ("Terminus (Terminus Group), a Chinese AI-of-Things / smart-city company — NOT the "
                  "ordinary word 'terminus' (an endpoint or end of a line/route), nor a software project "

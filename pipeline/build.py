@@ -22,6 +22,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import sys
 import time
 from collections import defaultdict
@@ -369,8 +370,23 @@ def main():
     # content). (breaking_stats skips kind=="model" and llm_extract ignores it, so nothing re-adds.)
     if "hugging-face" in rec.ents:
         for s in stories:
-            if s.get("source") == "Hugging Face Trending":
-                mentions[s["id"]] = {"hugging-face"}
+            if s.get("source") != "Hugging Face Trending":
+                continue
+            # Carve-out: when the trending checkpoint IS a seeded model-level node (e.g.
+            # RecursiveSI/flint -> the seeded "Flint" model), let its HF upvotes light up that node
+            # too, so a genuinely popular open model trends on its own node instead of vanishing into
+            # the HF hub. Keyed on the hf_model slug (ground truth), so it bypasses the news-text
+            # disambiguation. Everything else -- and all Company/Concept nodes -- stays confined.
+            keep = set()
+            hfm = s.get("hf_model") or ""
+            if "/" in hfm:
+                name = hfm.split("/", 1)[1]
+                clean = re.sub(r"[-_.](?:GGUF|AWQ|GPTQ|FP8|FP4|NVFP4|MLX|bnb|4bit|8bit|i1|int4|int8|Q\d\w*)\b.*$",
+                               "", name, flags=re.I)
+                eid = slug(clean)
+                if eid in rec.ents and rec.ents[eid]["seed"] and rec.ents[eid]["type"] not in ("Company", "Concept"):
+                    keep.add(eid)
+            mentions[s["id"]] = keep | {"hugging-face"}
 
     # Run the LLM entity pass BEFORE the AI-relevance gate, so each story is judged on the entities the
     # LLM finds, not only dictionary hits and keywords. This catches AI stories -- especially on Hacker

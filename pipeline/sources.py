@@ -700,7 +700,10 @@ def fetch_trending_repos(since, log):
     if not snaps or (now - snaps[-1].get("ts", 0)) >= 20 * 3600:
         snaps.append({"ts": now, "stars": cur})
     else:
-        snaps[-1] = {"ts": now, "stars": {**snaps[-1].get("stars", {}), **cur}}
+        # Keep the day's ORIGINAL ts on refresh. Bumping it to `now` every 2-min run would keep
+        # (now - ts) under the 20 h gate forever, so a new daily snapshot would never be appended
+        # and velocity would be stuck in permanent cold start (d1/d7 always None).
+        snaps[-1] = {"ts": snaps[-1].get("ts", now), "stars": {**snaps[-1].get("stars", {}), **cur}}
     cutoff = now - TREND_SNAPSHOT_DAYS * 86400
     snaps = [s for s in snaps if s.get("ts", 0) >= cutoff]
     try:

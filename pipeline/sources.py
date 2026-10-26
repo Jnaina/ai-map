@@ -673,6 +673,12 @@ def _harvest_repo_mentions(stories):
     from entities import AI_RX  # lazy import: avoid any module-load cycle
     agg = {}
     for s in stories or []:
+        # Only HN discussions and RSS news -- the blind-spot signal. The GitHub lanes (kind="repo")
+        # are already the discovery path we're complementing, and their engagement is stargazers_count
+        # (not discussion heat), which would make the engagement threshold meaningless and let every
+        # github-sourced repo-story seed itself.
+        if s.get("kind") not in ("discussion", "news"):
+            continue
         url = s.get("url") or ""
         text = s.get("text") or ""
         if not AI_RX.search(f"{s.get('title','')} {text} {url}"):

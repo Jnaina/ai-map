@@ -426,6 +426,10 @@
     // activity tracking (for idle-aware live updates) + the "fresh data" pill
     ["pointerdown", "wheel", "keydown", "touchstart", "mousemove"].forEach((ev) =>
       document.addEventListener(ev, markActivity, { passive: true }));
+    // feed scroll tracking: a user scroll of the incoming feed defers the snap-back-to-top; the
+    // programmatic snap (feedSnapping) is ignored so it doesn't keep re-arming itself.
+    const feedList = $("#feedList");
+    if (feedList) feedList.addEventListener("scroll", () => { if (!feedSnapping) feedActivity = Date.now(); }, { passive: true });
     const pill = $("#freshPill");
     if (pill) pill.addEventListener("click", () => { if (!applying) applyUpdate(); });
   }
@@ -461,12 +465,17 @@
     }
   }
 
-  // ---- Incoming-feed HUD (lower-left): the newest items, streamed from new_counts.latest (which
-  //      the page already polls every 90s). New items appear at the top and push the rest down;
-  //      the list holds at most FEED_MAX. Clicking an item opens the article in a new tab.
-  const FEED_MAX = 10;
+  // ---- Incoming-feed HUD (lower-left): the last 24 h of discovered items, streamed from
+  //      new_counts.latest (which the page already polls every 90s). New items appear at the top
+  //      and push the rest down; the list holds at most FEED_MAX and scrolls (clamped between the
+  //      menus by fitFeed). It eases back to the top when the viewer stops scrolling it (snapFeedToTop).
+  //      Clicking an item opens the article in a new tab.
+  const FEED_MAX = 500;     // matches the backend's 24 h cap (latest_max); the list scrolls
+  const FEED_IDLE_MS = 20000; // after this long without scrolling the feed, it eases back to the top
   let feedUrls = [];        // urls currently shown, top -> bottom
   let firstFeed = true;     // first paint shouldn't flash every item as "new"
+  let feedActivity = 0;     // last time the viewer scrolled the feed (0 = never)
+  let feedSnapping = false; // true while a programmatic snap-to-top is in flight (ignore its scroll events)
   // compact relative time from a unix-seconds timestamp (when the item was first discovered)
   const relShort = (sec) => {
     const s = Date.now() / 1000 - (+sec || 0);
@@ -479,6 +488,18 @@
   // refresh just the age labels in place (no rebuild, no flashing), so times stay live between polls
   function refreshFeedTimes() {
     document.querySelectorAll("#feedList .fage").forEach((e) => { e.textContent = relShort(e.dataset.ts); });
+  }
+  // Ease the feed back to the top once the viewer stops scrolling it for FEED_IDLE_MS, so it always
+  // returns to the newest items. User scrolls mark feedActivity (a scroll listener wired in
+  // bindStaticOnce); the programmatic snap below is guarded so its own scroll events don't re-arm it.
+  function snapFeedToTop() {
+    const list = $("#feedList");
+    if (!list || feedSnapping) return;
+    if (list.scrollTop <= 2) return;                          // already at the top
+    if (Date.now() - feedActivity < FEED_IDLE_MS) return;     // still being scrolled/read
+    feedSnapping = true;
+    list.scrollTo({ top: 0, behavior: "smooth" });
+    setTimeout(() => { feedSnapping = false; }, 800);         // cover the smooth-scroll's own events
   }
   // Clamp the HUD into the gap between the top chrome (header + type chips) and the bottom legend,
   // so it can never cover either menu. The legend wraps to a variable number of lines with the
@@ -599,6 +620,8 @@
   setInterval(() => { if (pending && !applying && isIdle()) applyUpdate(); }, 3000);
   // keep the incoming-feed age labels ("5m ago") ticking even when no new build has arrived
   setInterval(refreshFeedTimes, 30000);
+  // ease the incoming feed back to the top once the viewer stops scrolling it
+  setInterval(snapFeedToTop, 2000);
   // re-check promptly when the tab regains focus
   document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
 })();

@@ -151,29 +151,34 @@ def export_recent(db_path=DB_PATH, out_path=EXPORT_PATH, days=EXPORT_DAYS, log=p
     log(f"[articles] exported {total} links from {len(sources)} sources (last {days} days) -> {out_path}")
 
 
-def write_new_counts(db_path=DB_PATH, out_path=NEW_COUNTS_PATH, window_s=3600, log=print):
+def write_new_counts(db_path=DB_PATH, out_path=NEW_COUNTS_PATH, window_s=3600,
+                     latest_window_s=86400, latest_max=500, log=print):
     """Write web/data/new_counts.json: how many links were first discovered in the last
-    `window_s` seconds (i.e. new since the previous hourly build). The map page shows this
-    under the Articles button."""
+    `window_s` seconds (i.e. new since the previous hourly build), plus the on-map "Incoming feed"
+    ticker items from the last `latest_window_s` seconds. The map page shows the tally under the
+    Articles button and streams the ticker into the lower-left HUD."""
     now = int(time.time())
     conn = connect(db_path)
     n = conn.execute("SELECT COUNT(*) FROM articles WHERE first_seen >= ?", (now - window_s,)).fetchone()[0]
-    # Newest-discovered items for the on-map "Incoming feed" ticker (title + source + link). Ordered
-    # by first_seen (when we discovered the link = "incoming"), newest first; small so it rides along
-    # on the tiny new_counts.json the page already polls every 90s (no extra request).
+    # Items for the on-map "Incoming feed" ticker (title + source + link), covering the last
+    # `latest_window_s` (24 h), newest-discovered first. Capped at `latest_max` so the tiny
+    # new_counts.json the page polls every 90s can't balloon on a busy day; the HUD scrolls through
+    # them and eases back to the top when the viewer stops scrolling.
     latest = [
         {"title": t, "source": s, "url": u, "first_seen": fs}
         for (t, s, u, fs) in conn.execute(
             "SELECT title, source, url, first_seen FROM articles "
-            "WHERE title IS NOT NULL AND title <> '' "
-            "ORDER BY first_seen DESC, published DESC LIMIT 15"
+            "WHERE title IS NOT NULL AND title <> '' AND first_seen >= ? "
+            "ORDER BY first_seen DESC, published DESC LIMIT ?",
+            (now - latest_window_s, latest_max)
         ).fetchall()
     ]
     conn.close()
-    data = dict(new_last_hour=n, window_seconds=window_s,
+    data = dict(new_last_hour=n, window_seconds=window_s, latest_window_seconds=latest_window_s,
                 generated_at=datetime.fromtimestamp(now, timezone.utc).isoformat(timespec="minutes"),
                 latest=latest)
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     json.dump(data, open(out_path, "w"), separators=(",", ":"))
-    log(f"[articles] {n} new links in the last {window_s // 60} min -> {out_path}")
+    log(f"[articles] {n} new links in the last {window_s // 60} min; "
+        f"feed spans last {latest_window_s // 3600}h ({len(latest)} items) -> {out_path}")
     return n

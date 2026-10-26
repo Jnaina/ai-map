@@ -524,8 +524,15 @@
     // bottom boundary: the top of the legend if it's showing, else the viewport floor
     const lg = visRect("#legend");
     const bottomEdge = lg ? lg.top : vh;
+    // Height is exactly the room between the menus (bottom-anchored above the legend), with NO lower
+    // floor: a floor larger than the gap would push the feed's top up over the chips/bar on a short
+    // viewport. If the gap is too small to be useful, hide the HUD rather than cover a menu — use
+    // visibility (not the `hidden` attr, which gates this function) so a later resize can restore it.
+    const avail = bottomEdge - topEdge - FEED_GAP * 2;
+    if (avail < 70) { wrap.style.visibility = "hidden"; return; }
+    wrap.style.visibility = "";
     wrap.style.bottom = Math.max(FEED_GAP, vh - bottomEdge + FEED_GAP) + "px";
-    wrap.style.maxHeight = Math.max(120, bottomEdge - topEdge - FEED_GAP * 2) + "px";
+    wrap.style.maxHeight = avail + "px";
   }
   function renderFeed(latest) {
     const list = $("#feedList"), wrap = $("#feed");

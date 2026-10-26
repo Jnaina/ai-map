@@ -350,6 +350,17 @@ TREND_PCT7_MIN_ABS = 100    #      but only when the absolute 7-day gain clears 
 TREND_MAX = 15              # hard cap on how many trending repos reach the map
 TREND_MAX_AVG_PER_DAY = 700 # star-farm guard: drop repos (older than 45 d) averaging more than this
 TREND_SNAPSHOT_DAYS = 35    # retention of the daily snapshot store (headroom over the 30-day series)
+# Auto-seeding from HN/news: a repo that's hot in the stories we already collect (a high-engagement
+# HN post, or one mentioned across several stories) is seeded into the velocity pool even with NO AI
+# topic tag -- closing the "topicless blind spot" (strata/OpenShell) without hand-curation. Gated on
+# AI relevance so unrelated repos don't leak in; capped per run to bound GitHub REST calls.
+TREND_SEED_MIN_ENGAGEMENT = 75  # a single story with >= this many points (HN) seeds its repo
+TREND_SEED_MIN_STORIES = 2      # ...or a repo mentioned across >= this many distinct stories
+TREND_SEED_MAX_PER_RUN = 20     # cap new /repos lookups per run (REST core rate limit)
+GH_REPO_RX = re.compile(r"github\.com/([A-Za-z0-9][\w.-]*)/([A-Za-z0-9][\w.-]*)")
+GH_NON_REPO_OWNERS = {"orgs", "sponsors", "topics", "collections", "features", "about", "pricing",
+                      "marketplace", "settings", "notifications", "login", "join", "search", "trending",
+                      "apps", "site", "contact", "security", "readme", "explore", "new", "account"}
 # Repos behind our curated release feeds (Strata, Project Maya, vLLM, agent frameworks...). They are
 # seeded into the velocity pool regardless of topic tags / star floor, because some carry NO GitHub
 # topics (e.g. niko1221/strata: 31k* but topics=[]) so topic-search can't find them -- the OpenShell
@@ -638,11 +649,53 @@ def fetch_github(since, log):
     return out
 
 
-def fetch_trending_repos(since, log):
-    """Rank the top AI-topic repos by star *velocity* and emit the top TREND_MAX as repo stories,
-    each carrying a 30-day star series for a sparkline. Stores one star snapshot per day in
-    github-stars.json; velocity is current stars minus the snapshot ~1 day / ~7 days ago. During
-    the first week (no history yet) it falls back to ranking by total stars. Best-effort; never raises."""
+def _trend_repo_ok(r):
+    """Shared admission gate for the velocity pool: enough stars, recently pushed, not an obvious
+    star-farm. Star-farm guard: no legit repo sustains a huge lifetime-average star rate for months
+    (a 300k-star repo < 1 yr old is fake); real top AI repos sit well under 200/day."""
+    st = r.get("stargazers_count", 0)
+    if st < TREND_MIN_STARS or r.get("archived"):
+        return False
+    pushed = _parse_date(r.get("pushed_at")) or 0
+    if pushed and pushed < time.time() - 180 * 86400:          # drop abandoned repos
+        return False
+    created = _parse_date(r.get("created_at")) or 0
+    age_d = (time.time() - created) / 86400 if created else 0
+    if age_d > 45 and st / age_d > TREND_MAX_AVG_PER_DAY:
+        return False
+    return True
+
+
+def _harvest_repo_mentions(stories):
+    """Find github.com/<owner>/<repo> mentions in the stories we already fetched that look AI-relevant,
+    and aggregate per repo. Returns {full_name: (max_engagement, distinct_story_count)} -- the signal
+    for auto-seeding hot-but-topicless repos into the velocity pool."""
+    from entities import AI_RX  # lazy import: avoid any module-load cycle
+    agg = {}
+    for s in stories or []:
+        url = s.get("url") or ""
+        text = s.get("text") or ""
+        if not AI_RX.search(f"{s.get('title','')} {text} {url}"):
+            continue
+        fns = set()
+        for owner, repo in GH_REPO_RX.findall(f"{url} {text}"):
+            if owner.lower() in GH_NON_REPO_OWNERS:
+                continue
+            fns.add(f"{owner}/{repo[:-4] if repo.endswith('.git') else repo}")
+        eng = s.get("engagement") or 0
+        for fn in fns:
+            e, n = agg.get(fn, (0, 0))
+            agg[fn] = (max(e, eng), n + 1)
+    return agg
+
+
+def fetch_trending_repos(since, log, stories=None):
+    """Rank the top AI repos by star *velocity* and emit the top TREND_MAX as repo stories, each
+    carrying a 30-day star series for a sparkline. The pool is the top AI-*topic* repos by stars, plus
+    curated release-feed repos, plus repos auto-seeded from hot HN/news stories (`stories`) so a repo
+    with no AI topic tag still gets tracked when it's trending. Stores one star snapshot per day in
+    github-stars.json; velocity is current stars minus the snapshot ~1 day / ~7 days ago. During the
+    first week (no history yet) it falls back to ranking by total stars. Best-effort; never raises."""
     tok = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
     hdr = {"Accept": "application/vnd.github+json", **({"Authorization": f"Bearer {tok}"} if tok else {})}
     pool = {}  # full_name -> current repo dict (max stars seen across topics)
@@ -654,21 +707,10 @@ def fetch_trending_repos(since, log):
             log(f"  ! trending topic:{topic}: {str(e)[:80]}")
             continue
         for r in data.get("items", []):
-            st = r.get("stargazers_count", 0)
-            if st < TREND_MIN_STARS or r.get("archived"):
-                continue
-            pushed = _parse_date(r.get("pushed_at")) or 0
-            if pushed and pushed < time.time() - 180 * 86400:  # drop abandoned repos
-                continue
-            # Star-farm guard: no legit repo sustains a huge lifetime-average star rate for months.
-            # Fakes (e.g. 300k+ stars on a repo < 1 yr old) show implausible avg/day; real top AI
-            # repos sit well under 200/day. Drop repos older than 45 d averaging > 700 stars/day.
-            created = _parse_date(r.get("created_at")) or 0
-            age_d = (time.time() - created) / 86400 if created else 0
-            if age_d > 45 and st / age_d > TREND_MAX_AVG_PER_DAY:
+            if not _trend_repo_ok(r):
                 continue
             fn = r["full_name"]
-            if fn not in pool or st > pool[fn].get("stargazers_count", 0):
+            if fn not in pool or r.get("stargazers_count", 0) > pool[fn].get("stargazers_count", 0):
                 pool[fn] = r
         time.sleep(1.5 if tok else 7)  # unauthenticated search allows 10 requests/minute
     # Seed the curated release-feed repos (bypassing topic/star gates) so topicless-but-popular repos
@@ -689,6 +731,33 @@ def fetch_trending_repos(since, log):
         time.sleep(0.3 if tok else 2)
     if seeded:
         log(f"  Trending AI repos: seeded {seeded} release-feed repo(s) into the pool")
+
+    # Auto-seed hot-but-topicless repos surfaced by the HN/news stories we already fetched. These
+    # bypass the topic/star-floor discovery (they may carry NO AI topic tag) but still face the shared
+    # _trend_repo_ok admission gate, an AI-relevance check, and an engagement/mention-count threshold.
+    autoseeded = 0
+    if stories:
+        ranked = sorted(_harvest_repo_mentions(stories).items(),
+                        key=lambda kv: -(1000 * kv[1][1] + kv[1][0]))  # distinct stories first, then engagement
+        for fn, (eng, n) in ranked:
+            if autoseeded >= TREND_SEED_MAX_PER_RUN:
+                break
+            if fn in pool or fn in RELEASE_FEED_REPOS:
+                continue
+            if eng < TREND_SEED_MIN_ENGAGEMENT and n < TREND_SEED_MIN_STORIES:
+                continue
+            try:
+                r = json.loads(_get(f"https://api.github.com/repos/{fn}", hdr))
+            except Exception as e:
+                log(f"  ! trending autoseed {fn}: {str(e)[:50]}")
+                continue
+            if r.get("full_name") and _trend_repo_ok(r):
+                pool[r["full_name"]] = r
+                autoseeded += 1
+            time.sleep(0.3 if tok else 2)
+    if autoseeded:
+        log(f"  Trending AI repos: auto-seeded {autoseeded} hot repo(s) from HN/news")
+
     if not pool:
         log("  Trending AI repos: pool empty (API unreachable)")
         return []
@@ -823,7 +892,7 @@ def fetch_all(window_days=7, log=print):
     stories += _throttled("HF papers", DEFAULT_FEED_INTERVAL_HOURS, since, lambda: fetch_hf_papers(since, log), log)
     stories += _throttled("HF models", DEFAULT_FEED_INTERVAL_HOURS, since, lambda: fetch_hf_models(since, log, now), log)
     stories += _throttled("GitHub", DEFAULT_FEED_INTERVAL_HOURS, since, lambda: fetch_github(since, log), log)
-    stories += _throttled("GitHub trending", DEFAULT_FEED_INTERVAL_HOURS, since, lambda: fetch_trending_repos(since, log), log)
+    stories += _throttled("GitHub trending", DEFAULT_FEED_INTERVAL_HOURS, since, lambda: fetch_trending_repos(since, log, stories), log)
     # de-duplicate by URL (same article posted to HN and a feed counts once per source)
     seen, uniq = set(), []
     for s in stories:

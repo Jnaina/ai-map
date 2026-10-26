@@ -336,6 +336,16 @@ def domain_entity(url):
 GITHUB_TOPICS = ["llm", "ai-agents", "agents", "generative-ai", "mcp", "large-language-models", "rag", "ai",
                  # inference-optimisation / local-LLM discovery: surface the next ktransformers/PowerInfer
                  "llm-inference", "inference", "llm-serving", "quantization", "local-llm", "on-device-ai", "gguf"]
+# The bare "ai" tag is heavily abused by SEO / piracy repos that stuff it to ride the AI wave, so a repo
+# that qualified ONLY via a generic tag (no specific AI topic below) must also show an AI signal in its
+# text, or it's dropped. See _new_repo_ok.
+GH_GENERIC_TOPICS = {"ai", "agents", "inference", "quantization"}
+# Piracy / warez SEO repos (crack/keygen/activator/... for commercial software) farm stars and stuff
+# AI tags for visibility -- a hard reject on the owner/repo name regardless of topics or stars.
+GH_SPAM_RX = re.compile(
+    r"(?:^|[-_/])(?:cracks?|cracked|keygens?|nulled|warez|activators?|activation|repack|"
+    r"pre-?activated|serial(?:-?keys?)?|license-?keys?|product-?keys?|free-?downloads?|"
+    r"full-?version|torrents?|pirat(?:e|ed|ing)|patcher)(?:$|[-_/])", re.I)
 
 # --- "Trending AI Repos" lane --------------------------------------------------------------------
 # Star *velocity* across the top AI-topic repos, computed from a daily snapshot store. Unlike
@@ -620,6 +630,21 @@ def fetch_hf_models(since, log, now):
     return out
 
 
+def _new_repo_ok(r):
+    """Admission gate for the 'GitHub (new repos)' lane, on top of the star floor. Rejects obvious
+    piracy/warez SEO repos (free-cracks/Adobe-Acrobat-Pro and friends), and repos that only matched a
+    generic tag (e.g. bare 'ai') with no AI signal in their name/description."""
+    full = (r.get("full_name") or "").lower()
+    if GH_SPAM_RX.search(full):
+        return False
+    topics = {t.lower() for t in (r.get("topics") or [])}
+    if not (topics - GH_GENERIC_TOPICS) & {t.lower() for t in GITHUB_TOPICS}:
+        from entities import AI_RX  # lazy import: avoid a module-load cycle
+        if not AI_RX.search(f"{r.get('name') or ''} {r.get('description') or ''}"):
+            return False
+    return True
+
+
 def fetch_github(since, log):
     out, seen = [], set()
     created = datetime.fromtimestamp(since - 23 * 86400, timezone.utc).strftime("%Y-%m-%d")  # repos < 30 days old
@@ -636,6 +661,8 @@ def fetch_github(since, log):
             if r["full_name"] in seen or r.get("stargazers_count", 0) < 100:
                 continue
             seen.add(r["full_name"])
+            if not _new_repo_ok(r):
+                continue
             date = _parse_date(r.get("pushed_at")) or time.time()
             if date < since:  # not active inside the window
                 continue

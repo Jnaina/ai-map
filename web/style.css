@@ -139,6 +139,12 @@ dialog h3{font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacin
 .feed-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--mid)}
 .feed-list{list-style:none;margin:0;padding:3px 6px 5px;flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
 .feed-list::-webkit-scrollbar{width:0;height:0}
+/* Slim scroll-position indicator on the feed's right edge (the native scrollbar is hidden above);
+   JS sizes/positions the thumb from the list's live scroll metrics and toggles .show when it overflows. */
+.feed-scroll{position:absolute;right:3px;width:3px;border-radius:3px;background:var(--glass-border);
+  opacity:0;transition:opacity .25s ease;pointer-events:none;z-index:2}
+.feed-scroll.show{opacity:.85}
+.feed-scroll i{position:absolute;left:0;width:3px;border-radius:3px;background:var(--accent);opacity:.6}
 .feed-item{display:block;padding:4px 8px;border-radius:7px;text-decoration:none;color:var(--ink);
   border-left:2px solid transparent;transition:background .15s ease,border-color .15s ease}
 .feed-list li + li{margin-top:1px;border-top:1px dashed rgba(29,29,29,.09)}

@@ -443,7 +443,7 @@
     // feed scroll tracking: a user scroll of the incoming feed defers the snap-back-to-top; the
     // programmatic snap (feedSnapping) is ignored so it doesn't keep re-arming itself.
     const feedList = $("#feedList");
-    if (feedList) feedList.addEventListener("scroll", () => { if (!feedSnapping) feedActivity = Date.now(); }, { passive: true });
+    if (feedList) feedList.addEventListener("scroll", () => { if (!feedSnapping) feedActivity = Date.now(); updateFeedScroll(); }, { passive: true });
     const pill = $("#freshPill");
     if (pill) pill.addEventListener("click", () => { if (!applying) applyUpdate(); });
   }
@@ -520,6 +520,25 @@
     list.scrollTo({ top: 0, behavior: "smooth" });
     setTimeout(() => { feedSnapping = false; }, 800);         // cover the smooth-scroll's own events
   }
+  // Slim scroll-position indicator on the feed's right edge. The native scrollbar is hidden for
+  // looks, so without this there's no cue to where you are in the 24 h list. Sized and placed from
+  // the list's live scroll metrics (overlaid on the list's viewport, below the header); hidden when
+  // the content fits so it only appears when there's actually something to scroll.
+  function updateFeedScroll() {
+    const list = $("#feedList"), ind = $("#feedScroll");
+    if (!list || !ind) return;
+    const sh = list.scrollHeight, ch = list.clientHeight;
+    if (sh - ch <= 2) { ind.classList.remove("show"); return; }   // nothing to scroll
+    const trackH = ch - 4;
+    const thumb = ind.firstElementChild;
+    const th = Math.max(16, Math.round(trackH * ch / sh));         // thumb ∝ visible fraction
+    const ratio = list.scrollTop / (sh - ch);
+    ind.style.top = (list.offsetTop + 2) + "px";
+    ind.style.height = trackH + "px";
+    thumb.style.height = th + "px";
+    thumb.style.top = Math.round((trackH - th) * ratio) + "px";
+    ind.classList.add("show");
+  }
   // Clamp the HUD into the gap between the top chrome (header + type chips) and the bottom legend,
   // so it can never cover either menu. The legend wraps to a variable number of lines with the
   // window width, so we measure live rather than trust a fixed offset. If the feed's content is
@@ -552,6 +571,7 @@
     wrap.style.visibility = "";
     wrap.style.bottom = Math.max(FEED_GAP, vh - bottomEdge + FEED_GAP) + "px";
     wrap.style.maxHeight = avail + "px";
+    updateFeedScroll();   // the list's viewport height just changed; re-place the indicator
   }
   function renderFeed(latest) {
     const list = $("#feedList"), wrap = $("#feed");
@@ -562,7 +582,7 @@
     const order = items.map((it) => it.url);
     wrap.hidden = false;
     fitFeed();   // size/position into the gap between the menus now that it's visible
-    if (order.length === feedUrls.length && order.every((u, i) => u === feedUrls[i])) { refreshFeedTimes(); return; }
+    if (order.length === feedUrls.length && order.every((u, i) => u === feedUrls[i])) { refreshFeedTimes(); updateFeedScroll(); return; }
     const prev = new Set(feedUrls);  // the build we were showing; after the first paint, anything not in it is new
     list.innerHTML = items.map((it) => {
       const fresh = !firstFeed && !prev.has(it.url);  // first paint: show the list without flashing every row
@@ -573,6 +593,7 @@
     feedUrls = order;
     firstFeed = false;
     refreshFeedTimes();
+    updateFeedScroll();   // content changed; resize/reposition the scroll indicator
   }
   async function fetchCounts() {
     try { return await (await fetch("data/new_counts.json", { cache: "no-store" })).json(); }

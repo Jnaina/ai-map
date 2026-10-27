@@ -67,6 +67,9 @@ RSS_FEEDS = [
     ("Microsoft Research", "https://www.microsoft.com/en-us/research/feed/", 1.0),
     ("Meta Engineering", "https://engineering.fb.com/feed/", 1.0),
     ("Amazon Science", "https://www.amazon.science/index.rss", 0.9),  # Amazon's research output; AI-dense but not AI-only (some non-AI CS) -> gated. Validated live 2026-10-27
+    # AI commentary / roundups: AI-focused but occasionally off-topic -> gated; opinion, so modest weight.
+    ("Zvi Mowshowitz", "https://thezvi.substack.com/feed", 0.7),  # "Don't Worry About the Vase": dense weekly AI roundups (many entities per post, hence the low weight). Validated live 2026-10-27
+    ("Gary Marcus", "https://garymarcus.substack.com/feed", 0.8),  # prominent AI skeptic/commentator; single-topic opinion. Validated live 2026-10-27
     ("The Information", "https://www.theinformation.com/feed", 1.0),
     ("Semafor", "https://www.semafor.com/rss.xml", 0.9),
     ("Platformer", "https://www.platformer.news/rss/", 0.9),
@@ -199,6 +202,7 @@ RSS_FEEDS = [
 # Hacker News. The AI-category feeds above are trusted as-is and never filtered.
 AI_FILTER_SOURCES = {
     "Google Research", "Microsoft Research", "Meta Engineering", "Amazon Science",
+    "Zvi Mowshowitz", "Gary Marcus",
     "The Information", "Semafor", "Platformer", "SemiAnalysis",
     "Quanta Magazine", "404 Media", "Databricks", "CSET",
     "ChinaTalk", "Interconnected", "SCMP Tech", "TechNode", "Pandaily",

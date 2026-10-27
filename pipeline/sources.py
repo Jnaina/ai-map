@@ -59,11 +59,14 @@ RSS_FEEDS = [
     ("Last Week in AI", "https://lastweekin.ai/feed/", 0.9),
     ("Berkeley AI Research", "https://bair.berkeley.edu/blog/feed.xml", 0.9),
     ("Lilian Weng", "https://lilianweng.github.io/posts/index.xml", 0.9),
+    ("METR", "https://metr.org/feed.xml", 1.0),  # AI evaluations / dangerous-capability + model-autonomy research (AI-only org, trusted); validated live 2026-10-27
+    ("Air Street Press", "https://press.airstreet.com/feed", 0.8),  # Nathan Benaich; author of the annual State of AI Report (AI-only, low volume, trusted); validated live 2026-10-27
     ("arXiv cs.AI", "https://export.arxiv.org/rss/cs.AI", 0.4),  # AI-only category; export.* host (rss.* returns empty); firehose -> low weight
     # Broader tech/research sources: not AI-only feeds, so they are AI-relevance gated below.
     ("Google Research", "https://research.google/blog/rss/", 1.1),
     ("Microsoft Research", "https://www.microsoft.com/en-us/research/feed/", 1.0),
     ("Meta Engineering", "https://engineering.fb.com/feed/", 1.0),
+    ("Amazon Science", "https://www.amazon.science/index.rss", 0.9),  # Amazon's research output; AI-dense but not AI-only (some non-AI CS) -> gated. Validated live 2026-10-27
     ("The Information", "https://www.theinformation.com/feed", 1.0),
     ("Semafor", "https://www.semafor.com/rss.xml", 0.9),
     ("Platformer", "https://www.platformer.news/rss/", 0.9),
@@ -195,7 +198,7 @@ RSS_FEEDS = [
 # if they look AI-relevant (AI keyword or an AI-specific entity), the same gate used for
 # Hacker News. The AI-category feeds above are trusted as-is and never filtered.
 AI_FILTER_SOURCES = {
-    "Google Research", "Microsoft Research", "Meta Engineering",
+    "Google Research", "Microsoft Research", "Meta Engineering", "Amazon Science",
     "The Information", "Semafor", "Platformer", "SemiAnalysis",
     "Quanta Magazine", "404 Media", "Databricks", "CSET",
     "ChinaTalk", "Interconnected", "SCMP Tech", "TechNode", "Pandaily",

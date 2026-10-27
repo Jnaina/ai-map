@@ -22,7 +22,16 @@ python3 pipeline/build.py "$@" 2>&1 | tee "$LOGFILE"
 
 # Feed-health report: summarise feed intake/errors across the build logs (incl. this run)
 # into data/feed_health.json, and print any feeds needing attention. Best-effort.
-python3 pipeline/feed_health.py 2>&1 | tee -a "$LOGFILE" || true
+# Bounded to the last ~720 runs (~24h at the 2-min cadence) so a stray transient failure can't
+# wedge a feed "down" for days until its log line ages out, while still keeping enough appearances
+# for the silent-feed heuristic (SILENT_MIN_RUNS) on the slowest ~hourly feeds.
+python3 pipeline/feed_health.py --runs 720 2>&1 | tee -a "$LOGFILE" || true
+
+# Failure/recovery ledger: appends every source outage and recovery (plus quiet/no-content
+# transitions) to data/feed_events.jsonl and refreshes data/feed_events_summary.json with the
+# per-source history - failures, outages, minutes down, error kinds, days since last story - that
+# the keep / change-pull-interval / drop review (due 2026-10-26) needs. Best-effort.
+python3 pipeline/feed_events.py 2>&1 | tee -a "$LOGFILE" || true
 
 # Feed-failure notifications: ntfy push whenever a source is down/missing, re-sent each run
 # as an hourly reminder while it stays broken; sends nothing when all feeds are healthy.

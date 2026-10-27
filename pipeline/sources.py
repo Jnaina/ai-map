@@ -560,17 +560,27 @@ def fetch_hn(since, log, max_pages=8):
                         discussion=f"https://news.ycombinator.com/item?id={oid}"))
 
     # 1) the whole current front page, regardless of score (these have "hit the main page")
+    fp_ok = False
     try:
         fp = json.loads(_get("https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=100"))
         for h in fp.get("hits", []):
             if (h.get("created_at_i") or 0) >= since:
                 add(h)
+        fp_ok = True
     except Exception as e:
         log(f"  ! Hacker News front page: {str(e)[:80]}")
     fp_n = len(out)
+    # Log the sub-fetch's SUCCESS as its own parseable line, not only its failures. feed_health.py
+    # tracks a feed by the log lines bearing its name; "Hacker News front page" used to appear only
+    # in the "  ! ..." failure form, so its consecutive-failure streak could never reset -- a few
+    # transient timeouts (hours apart) wedged it permanently "down", paging every 2 min via
+    # feed_alert, while every real fetch since had succeeded. A success line lets the streak clear.
+    if fp_ok:
+        log(f"  Hacker News front page: {fp_n} stories")
 
     # 2) the /newest firehose: every story submitted in the window, no points floor
     page = 0
+    fh_failed = False
     while page < max_pages:
         q = urllib.parse.urlencode({"tags": "story", "hitsPerPage": 1000, "page": page,
                                     "numericFilters": f"created_at_i>{int(since)}"})
@@ -578,12 +588,18 @@ def fetch_hn(since, log, max_pages=8):
             data = json.loads(_get("https://hn.algolia.com/api/v1/search_by_date?" + q))
         except Exception as e:
             log(f"  ! Hacker News firehose: {str(e)[:80]}")
+            fh_failed = True
             break
         for h in data.get("hits", []):
             add(h)
         page += 1
         if page >= data.get("nbPages", 0):
             break
+    # Success line for the firehose sub-fetch too (same reasoning as the front page above). Counts
+    # as failed only if the very first page errored (no stories at all); a later-page error still
+    # yielded stories, so treat that as a success.
+    if not (fh_failed and page == 0):
+        log(f"  Hacker News firehose: {len(out) - fp_n} stories")
     log(f"  Hacker News: {len(out)} stories ({fp_n} front page + {len(out) - fp_n} new in window; "
         f"AI-gated downstream)")
     return out

@@ -17,6 +17,9 @@ const el = {
 const KIND_ENG = { discussion: "pts", paper: "▲", model: "▲", repo: "★" };
 const KIND_LABEL = { news: "news", discussion: "discussion", paper: "paper", model: "model", repo: "repo" };
 
+// Order the type groups appear in the sidebar. Any type not listed falls to the end, alphabetically.
+const TYPE_ORDER = ["Company", "Concept", "Model", "Product", "Open source", "Hardware", "Person"];
+
 function esc(s) {
   return (s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 }
@@ -53,18 +56,35 @@ function currentArticles() {
 function renderNav() {
   const d = state.data;
   const q = state.q.trim().toLowerCase();
+
+  // Group the (optionally search-filtered) topics by type. The selected topic always stays visible.
+  const groups = new Map();
+  for (const t of d.topics) {
+    if (q && !t.label.toLowerCase().includes(q) && t.id !== state.topic) continue;
+    const ty = t.type || "Other";
+    (groups.get(ty) || groups.set(ty, []).get(ty)).push(t);
+  }
+  // Order groups by TYPE_ORDER, then any unlisted type alphabetically at the end.
+  const types = [...groups.keys()].sort((a, b) => {
+    const ia = TYPE_ORDER.indexOf(a), ib = TYPE_ORDER.indexOf(b);
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    if (ia !== -1) return -1;
+    if (ib !== -1) return 1;
+    return a.localeCompare(b);
+  });
+
   const items = [`<button class="src all${state.topic === null ? " on" : ""}" data-topic="">
       <span class="favwrap"><span class="favtile allicon">★</span></span>
       <span class="name">All topics</span><span class="n">${d.total}</span></button>`];
-  // When searching, narrow the topic list to labels that match, so a topic is easy to find among
-  // the ~200. The selected topic always stays visible even if it doesn't match.
-  for (const t of d.topics) {
-    if (q && !t.label.toLowerCase().includes(q) && t.id !== state.topic) continue;
-    const letter = esc((t.label || "?").trim().charAt(0).toUpperCase());
-    items.push(`<button class="src${state.topic === t.id ? " on" : ""}" data-topic="${esc(t.id)}">
-      <span class="favwrap"><span class="favtile topicon">${letter}</span></span>
-      <span class="name" title="${esc(t.label)}">${esc(t.label)}</span>
-      ${t.type ? `<span class="ttype">${esc(t.type)}</span>` : ""}<span class="n">${t.count}</span></button>`);
+  for (const ty of types) {
+    const list = groups.get(ty).sort((a, b) => a.label.toLowerCase().localeCompare(b.label.toLowerCase()));
+    items.push(`<div class="grouphead">${esc(ty)}</div>`);
+    for (const t of list) {
+      const letter = esc((t.label || "?").trim().charAt(0).toUpperCase());
+      items.push(`<button class="src${state.topic === t.id ? " on" : ""}" data-topic="${esc(t.id)}">
+        <span class="favwrap"><span class="favtile topicon">${letter}</span></span>
+        <span class="name" title="${esc(t.label)}">${esc(t.label)}</span><span class="n">${t.count}</span></button>`);
+    }
   }
   el.nav.innerHTML = items.join("");
   el.nav.querySelectorAll(".src").forEach(b => b.addEventListener("click", () => {

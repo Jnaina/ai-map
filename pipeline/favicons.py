@@ -22,6 +22,9 @@ MAX_AGE = 30 * 86400  # re-fetch an icon at most monthly
 ICON_URLS = {
     "interconnects.ai": "https://icon.horse/icon/interconnects.ai",
     "thealgorithmicbridge.com": "https://icon.horse/icon/thealgorithmicbridge.com",
+    # Google's icon service 404s for ByteDance and icon.horse only returns a grey "B" placeholder;
+    # DuckDuckGo's service has the real full-colour ByteDance mark.
+    "bytedance.com": "https://icons.duckduckgo.com/ip3/bytedance.com.ico",
 }
 
 # Canonical domain per known source name (needed where the feed name isn't the link domain,

@@ -29,6 +29,22 @@ EXPORT_DAYS = 90
 # only ~10-26 items) keep their one-off backfilled history instead of aging out.
 FULL_HISTORY_SOURCES = {"Anthropic", "Anthropic Engineering"}
 
+# Own-domain for the top company topics, so the Topics sidebar's Company group can show each
+# company's real favicon (keyed by domain, fetched+cached by favicons.ensure, same as the Articles
+# page). This is the company's OWN site, not the news source its stories come from. Companies not
+# listed here fall back to the letter tile. Curated by article volume; extend as needed.
+COMPANY_DOMAINS = {
+    "hugging-face": "huggingface.co", "anthropic": "anthropic.com", "openai": "openai.com",
+    "nvidia": "nvidia.com", "google": "google.com", "amazon": "amazon.com", "meta": "meta.com",
+    "deepseek": "deepseek.com", "microsoft": "microsoft.com", "alibaba-qwen": "qwen.ai",
+    "apple": "apple.com", "oracle": "oracle.com", "amd": "amd.com",
+    "google-deepmind": "deepmind.google", "moonshot-ai": "moonshot.ai", "intel": "intel.com",
+    "bytedance": "bytedance.com", "databricks": "databricks.com", "coreweave": "coreweave.com",
+    "huawei": "huawei.com", "ibm": "ibm.com", "minimax": "minimax.io", "sk-hynix": "skhynix.com",
+    "tencent": "tencent.com", "mistral-ai": "mistral.ai", "broadcom": "broadcom.com",
+    "samsung": "samsung.com", "tesla": "tesla.com", "nebius": "nebius.com",
+}
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS articles (
   url        TEXT PRIMARY KEY,
@@ -236,6 +252,14 @@ def export_topics(db_path=DB_PATH, out_path=TOPICS_PATH, days=EXPORT_DAYS, min_a
         label, typ = meta.get(eid, (eid.replace("-", " "), ""))
         topics.append(dict(id=eid, label=label or eid, type=typ or "", count=len(urls)))
     topics.sort(key=lambda t: (-t["count"], t["label"].lower()))
+    # Attach each curated company's own favicon (fetched+cached by domain, like the Articles page).
+    # Cached files are a no-op; only a missing/stale one triggers a fetch. Others keep the letter tile.
+    for t in topics:
+        dom = COMPANY_DOMAINS.get(t["id"])
+        if dom:
+            fav = favicons.ensure(dom, FAVICON_DIR, log=log)
+            if fav:
+                t["favicon"] = fav
     data = dict(
         generated_at=datetime.fromtimestamp(time.time(), timezone.utc).isoformat(timespec="minutes"),
         days=days, total=len(articles), topics=topics, articles=articles, byTopic=by_topic)

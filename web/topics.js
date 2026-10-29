@@ -45,6 +45,16 @@ function topicById(id) {
   return state.data.topics.find(t => t.id === id) || null;
 }
 
+// Sidebar icon for a topic: a curated company favicon when present (lazy-loaded, falling back to
+// the letter tile if the image is missing or fails), otherwise the letter tile alone.
+function tileHtml(t) {
+  const letter = esc((t.label || "?").trim().charAt(0).toUpperCase());
+  if (t.favicon) {
+    return `<span class="favwrap"><img class="fav" src="${esc(t.favicon)}" alt="" width="18" height="18" loading="lazy" decoding="async" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="favtile topicon" style="display:none">${letter}</span></span>`;
+  }
+  return `<span class="favwrap"><span class="favtile topicon">${letter}</span></span>`;
+}
+
 // The articles for the current selection, newest-discovered first. "All topics" (topic === null)
 // is the whole flat array (already the deduped union across every topic).
 function currentArticles() {
@@ -80,10 +90,8 @@ function renderNav() {
     const list = groups.get(ty).sort((a, b) => a.label.toLowerCase().localeCompare(b.label.toLowerCase()));
     items.push(`<div class="grouphead">${esc(ty)}</div>`);
     for (const t of list) {
-      const letter = esc((t.label || "?").trim().charAt(0).toUpperCase());
       items.push(`<button class="src${state.topic === t.id ? " on" : ""}" data-topic="${esc(t.id)}">
-        <span class="favwrap"><span class="favtile topicon">${letter}</span></span>
-        <span class="name" title="${esc(t.label)}">${esc(t.label)}</span><span class="n">${t.count}</span></button>`);
+        ${tileHtml(t)}<span class="name" title="${esc(t.label)}">${esc(t.label)}</span><span class="n">${t.count}</span></button>`);
     }
   }
   el.nav.innerHTML = items.join("");

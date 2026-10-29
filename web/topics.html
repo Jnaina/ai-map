@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI News by Topic — Jag's AI Heat Map</title>
+<meta name="description" content="Every article that fed Jag's AI Heat Map over the last 90 days, grouped by topic. Click a topic on the left to read all of its articles on the right — regardless of heat.">
+<link rel="canonical" href="https://ai-news.jagular.io/topics.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jag's AI Heat Map">
+<meta property="og:title" content="AI News by Topic — Jag's AI Heat Map">
+<meta property="og:description" content="Every AI news article that fed Jag's AI Heat Map over the last 90 days, grouped by topic.">
+<meta property="og:url" content="https://ai-news.jagular.io/topics.html">
+<meta property="og:image" content="https://ai-news.jagular.io/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="AI News by Topic — Jag's AI Heat Map">
+<meta name="twitter:description" content="Every AI news article behind the map over the last 90 days, by topic.">
+<meta name="twitter:image" content="https://ai-news.jagular.io/og-image.png">
+<link rel="stylesheet" href="articles.css?v=3">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#3b82f6">
+<style>
+  /* Topic-specific bits layered on top of the shared Articles styling. */
+  .src .favtile.topicon { background: var(--accent-soft, rgba(255,74,28,.1)); color: var(--accent, #ff4a1c); font-weight: 700; }
+  .ttype {
+    font-size: 11px; text-transform: lowercase; letter-spacing: .02em; opacity: .62;
+    padding: 1px 6px; border: 1px solid var(--glass-border, #2a3344); border-radius: 999px; white-space: nowrap;
+  }
+  #listHead .ttype { margin-left: 8px; vertical-align: 1px; }
+</style>
+</head>
+<body>
+<header id="bar">
+  <div class="brand">
+    <h1>JAG'S AI HEAT MAP</h1>
+    <span class="tag">by topic · last 90 days</span>
+  </div>
+  <div class="controls">
+    <input id="search" type="search" placeholder="Filter topics or headlines…" autocomplete="off" aria-label="Filter topics or headlines">
+    <a class="maplink" href="articles.html">By source</a>
+    <a class="maplink" href="index.html">← Map</a>
+  </div>
+</header>
+
+<main id="wrap">
+  <aside id="sources" aria-label="Topics">
+    <nav id="srcNav"></nav>
+  </aside>
+  <section id="list" aria-live="polite">
+    <div id="listHead"></div>
+    <ol id="articles"></ol>
+    <p id="empty" hidden>No articles.</p>
+  </section>
+</main>
+
+<script src="topics.js?v=1"></script>
+</body>
+</html>

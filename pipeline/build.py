@@ -445,11 +445,16 @@ def main():
     except Exception as e:
         print(f"[content-sig] skipped: {e}")
 
-    # Archive every link that fed the map into SQLite, then export the last 90 days
-    # for the Articles page. Never let this break the map build.
+    # Archive every link that fed the map into SQLite, then export the last 90 days for the
+    # Articles page (by source) and the Topics page (by entity). `mentions` is the build's final
+    # story->entity map; entity_meta gives each mentioned entity its display label+type. Never let
+    # this break the map build.
     try:
-        articles_db.record(stories)
+        used_ents = set().union(*mentions.values()) if mentions else set()
+        entity_meta = {e: (rec.ents[e]["label"], rec.ents[e]["type"]) for e in used_ents if e in rec.ents}
+        articles_db.record(stories, mentions=mentions, entity_meta=entity_meta)
         articles_db.export_recent()
+        articles_db.export_topics()
         articles_db.write_new_counts()
     except Exception as e:
         print(f"[articles] skipped: {e}")

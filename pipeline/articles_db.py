@@ -20,6 +20,7 @@ import favicons
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(ROOT, "data", "articles.db")
 EXPORT_PATH = os.path.join(ROOT, "web", "data", "articles.json")
+TOPICS_PATH = os.path.join(ROOT, "web", "data", "topics.json")
 NEW_COUNTS_PATH = os.path.join(ROOT, "web", "data", "new_counts.json")
 FAVICON_DIR = os.path.join(ROOT, "web", "assets", "favicons")
 EXPORT_DAYS = 90
@@ -43,6 +44,26 @@ CREATE TABLE IF NOT EXISTS articles (
 );
 CREATE INDEX IF NOT EXISTS idx_articles_published ON articles(published);
 CREATE INDEX IF NOT EXISTS idx_articles_source ON articles(source);
+
+-- Which entities (map topics) each article mentions. Populated from the build's final `mentions`
+-- map, keyed by the article's URL so it joins the `articles` table. Many-to-many: one article can
+-- sit under several topics, so it is de-duplicated per (url, entity_id). This is what the by-topic
+-- Topics page reads -- the heat map itself never consults it.
+CREATE TABLE IF NOT EXISTS article_entities (
+  url        TEXT,
+  entity_id  TEXT,
+  PRIMARY KEY (url, entity_id)
+);
+CREATE INDEX IF NOT EXISTS idx_ae_entity ON article_entities(entity_id);
+
+-- A small side table of entity display metadata (label + type), upserted each run so the Topics
+-- export can name a topic and show its type without the map's in-memory registry. An entity that
+-- later leaves the registry keeps the last label we recorded.
+CREATE TABLE IF NOT EXISTS entities (
+  id     TEXT PRIMARY KEY,
+  label  TEXT,
+  type   TEXT
+);
 """
 
 
@@ -83,12 +104,18 @@ def first_seen_map(urls, db_path=DB_PATH):
     return out
 
 
-def record(stories, db_path=DB_PATH, log=print):
+def record(stories, mentions=None, entity_meta=None, db_path=DB_PATH, log=print):
     """Upsert every story (link) into the archive. URL is the identity; a link seen
-    again updates its fields and `last_seen` but keeps the original `first_seen`."""
+    again updates its fields and `last_seen` but keeps the original `first_seen`.
+
+    `mentions` ({story_id -> set(entity_id)}, the build's final map) and `entity_meta`
+    ({entity_id -> (label, type)}) are optional; when given, the story<->topic edges and
+    the topic labels are recorded too, so the Topics page has data to group by. The story
+    id is NOT the URL for every source (HN/HF/GitHub use prefixed ids), so edges are keyed
+    by the same URL the articles table uses, resolved here where both are in hand."""
     now = int(time.time())
     conn = connect(db_path)
-    rows = 0
+    rows, edges = 0, 0
     with conn:
         for s in stories:
             url = s.get("url") or s.get("id")
@@ -107,9 +134,21 @@ def record(stories, db_path=DB_PATH, log=print):
                  s.get("kind") or "", int(s.get("published") or 0), int(s.get("engagement") or 0),
                  s.get("discussion") or "", now, now))
             rows += 1
+            if mentions is not None:
+                for e in mentions.get(s.get("id")) or ():
+                    conn.execute(
+                        "INSERT OR IGNORE INTO article_entities(url, entity_id) VALUES (?,?)", (url, e))
+                    edges += 1
+        for eid, lt in (entity_meta or {}).items():
+            label, typ = (lt if isinstance(lt, (list, tuple)) else (lt, ""))
+            conn.execute(
+                """INSERT INTO entities(id,label,type) VALUES (?,?,?)
+                   ON CONFLICT(id) DO UPDATE SET label=excluded.label, type=excluded.type""",
+                (eid, label or eid, typ or ""))
     total = conn.execute("SELECT COUNT(*) FROM articles").fetchone()[0]
     conn.close()
-    log(f"[articles] recorded {rows} links this run; archive now holds {total}")
+    extra = f"; {edges} topic links" if mentions is not None else ""
+    log(f"[articles] recorded {rows} links this run{extra}; archive now holds {total}")
 
 
 def export_recent(db_path=DB_PATH, out_path=EXPORT_PATH, days=EXPORT_DAYS, log=print):
@@ -149,6 +188,60 @@ def export_recent(db_path=DB_PATH, out_path=EXPORT_PATH, days=EXPORT_DAYS, log=p
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     json.dump(data, open(out_path, "w"), separators=(",", ":"))
     log(f"[articles] exported {total} links from {len(sources)} sources (last {days} days) -> {out_path}")
+
+
+def export_topics(db_path=DB_PATH, out_path=TOPICS_PATH, days=EXPORT_DAYS, min_articles=2, log=print):
+    """Write web/data/topics.json: the same `days` window as the Articles page, but grouped by
+    topic (entity) instead of source, and with NO heat ranking or cap -- every archived article a
+    topic appears in, newest-discovered first.
+
+    Normalised to stay lean: each article is stored once in a flat `articles[]` array; every topic
+    carries a list of integer indices into it (`byTopic`). An article mentioning several topics is
+    therefore stored once and referenced from each, not duplicated, so the file stays close to the
+    size of articles.json despite the many-to-many mapping."""
+    cutoff = int(time.time()) - days * 86400
+    conn = connect(db_path)
+    exempt = sorted(FULL_HISTORY_SOURCES)
+    ph = ",".join("?" * len(exempt))
+    where = "a.published >= ?" + (f" OR a.source IN ({ph})" if exempt else "")
+    cur = conn.execute(
+        f"""SELECT a.url,a.title,a.source,a.domain,a.kind,a.published,a.engagement,a.discussion,
+                   a.first_seen, ae.entity_id
+            FROM article_entities ae JOIN articles a ON a.url = ae.url
+            WHERE {where}
+            ORDER BY a.first_seen DESC, a.published DESC""", (cutoff, *exempt))
+    rows_by_url = {}    # url -> article dict (deduped, insertion order = newest-discovered first)
+    topic_urls = defaultdict(list)
+    for url, title, source, domain, kind, published, engagement, discussion, first_seen, eid in cur:
+        if url not in rows_by_url:
+            rows_by_url[url] = dict(url=url, title=title, source=source, domain=domain, kind=kind,
+                                    published=published, engagement=engagement,
+                                    discussion=discussion or None, first_seen=first_seen)
+        topic_urls[eid].append(url)
+    meta = {eid: (label, typ) for eid, label, typ in conn.execute("SELECT id,label,type FROM entities")}
+    conn.close()
+
+    # Keep only topics clearing the floor, then build the flat articles[] from just the URLs those
+    # topics reference, so no article lingers unreferenced and `total` is the true count shown.
+    kept = {eid: urls for eid, urls in topic_urls.items() if len(urls) >= min_articles}
+    idx, articles = {}, []
+    for urls in kept.values():
+        for url in urls:
+            if url not in idx:
+                idx[url] = len(articles)
+                articles.append(rows_by_url[url])
+    by_topic = {eid: [idx[u] for u in urls] for eid, urls in kept.items()}
+    topics = []
+    for eid, urls in kept.items():
+        label, typ = meta.get(eid, (eid.replace("-", " "), ""))
+        topics.append(dict(id=eid, label=label or eid, type=typ or "", count=len(urls)))
+    topics.sort(key=lambda t: (-t["count"], t["label"].lower()))
+    data = dict(
+        generated_at=datetime.fromtimestamp(time.time(), timezone.utc).isoformat(timespec="minutes"),
+        days=days, total=len(articles), topics=topics, articles=articles, byTopic=by_topic)
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    json.dump(data, open(out_path, "w"), separators=(",", ":"))
+    log(f"[articles] exported {len(topics)} topics over {len(articles)} articles (last {days} days) -> {out_path}")
 
 
 def write_new_counts(db_path=DB_PATH, out_path=NEW_COUNTS_PATH, window_s=3600,

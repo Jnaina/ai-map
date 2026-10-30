@@ -28,14 +28,20 @@ BOT_UA = re.compile(
     r"claude|perplexity|ccbot|amazonbot|applebot|\+https?://", re.I)
 DC_ASN = re.compile(
     r"google|amazon|aws|microsoft|azure|digital ?ocean|linode|akamai|ovh|hetzner|vultr|choopa|"
-    r"constant company|oracle|alibaba|tencent|huawei|contabo|m247|leaseweb|palo alto|virtualine|ghosty|"
+    r"constant company|oracle|alibaba|tencent|huawei|contabo|m247|leaseweb|techoff|palo alto|virtualine|ghosty|"
     r"cloudflare|dedik|egihosting|hostpapa|custodiandc|green floid|web2objects|aventice|virtual systems|"
     r"scaleway|netcup|ionos|hostinger|godaddy|datacamp|code200|hostroyale|mevspace|blatant|subnet digital|"
     r"railway|fly\.io|render|vercel|netlify|heroku|data ?cent(er|re)|hosting|server|vps|cloud", re.I)
+# WordPress / CMS vulnerability-scan fingerprints in the referer: a real browser never arrives with
+# one of these, so a hit on a real page carrying it is a scanner that guessed a WordPress URL.
+PROBE_REF = re.compile(
+    r"rest_route=|wp-json|wp-login|wp-admin|xmlrpc\.php|wlwmanifest|/wp-(?:content|includes|config)|[?&]author=\d", re.I)
 
 
-def bot_reason(path, ua, asn):
+def bot_reason(path, ua, asn, ref):
     if path not in PAGES:
+        return "probe"
+    if ref and PROBE_REF.search(ref):
         return "probe"
     if not ua or not BROWSER_UA.search(ua) or BOT_UA.search(ua):
         return "ua"
@@ -61,10 +67,10 @@ def main():
     # depends on a cookie / live IP we don't store, so it can't be recomputed here. Default run
     # only fills untagged rows; --all re-tags everything EXCEPT the self rows.
     where = " WHERE bot IS NULL" if "--all" not in sys.argv else " WHERE bot IS NULL OR bot <> 'self'"
-    rows = d1(f"SELECT id, path, ua, asn FROM visits{where}")
+    rows = d1(f"SELECT id, path, ua, asn, referer FROM visits{where}")
     groups = {}
     for r in rows:
-        reason = bot_reason(r["path"] or "", r["ua"], r["asn"])
+        reason = bot_reason(r["path"] or "", r["ua"], r["asn"], r.get("referer"))
         groups.setdefault(reason, []).append(r["id"])
     for reason, ids in groups.items():
         if reason is None:

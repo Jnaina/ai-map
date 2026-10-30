@@ -21,10 +21,16 @@ const BROWSER_UA_RX = /^Mozilla\/5\.0 \(/;
 // A "+http(s)://..." contact URL inside the UA is a near-universal crawler convention
 // (e.g. "Mozilla/5.0 (compatible; DataAIHub/1.0; +https://...)"); real browsers never carry one.
 const BOT_UA_RX = /bot|crawl|spider|slurp|scan|preview|fetch|curl|wget|python|go-http|java\/|okhttp|axios|undici|libwww|httpclient|scrapy|headless|phantom|puppeteer|playwright|selenium|monitor|uptime|pingdom|lighthouse|facebookexternalhit|whatsapp|telegram|discord|slack|leakix|censys|zgrab|masscan|nmap|nuclei|expanse|internet-measurement|semrush|ahrefs|mj12|yandex|baidu|bytespider|petal|gptbot|claude|perplexity|ccbot|amazonbot|applebot|\+https?:\/\//i;
-const DC_ASN_RX = /google|amazon|aws|microsoft|azure|digital ?ocean|linode|akamai|ovh|hetzner|vultr|choopa|constant company|oracle|alibaba|tencent|huawei|contabo|m247|leaseweb|palo alto|virtualine|ghosty|cloudflare|dedik|egihosting|hostpapa|custodiandc|green floid|web2objects|aventice|virtual systems|scaleway|netcup|ionos|hostinger|godaddy|datacamp|code200|hostroyale|mevspace|blatant|subnet digital|railway|fly\.io|render|vercel|netlify|heroku|data ?cent(er|re)|hosting|server|vps|cloud/i;
+const DC_ASN_RX = /google|amazon|aws|microsoft|azure|digital ?ocean|linode|akamai|ovh|hetzner|vultr|choopa|constant company|oracle|alibaba|tencent|huawei|contabo|m247|leaseweb|techoff|palo alto|virtualine|ghosty|cloudflare|dedik|egihosting|hostpapa|custodiandc|green floid|web2objects|aventice|virtual systems|scaleway|netcup|ionos|hostinger|godaddy|datacamp|code200|hostroyale|mevspace|blatant|subnet digital|railway|fly\.io|render|vercel|netlify|heroku|data ?cent(er|re)|hosting|server|vps|cloud/i;
+// WordPress / CMS vulnerability-scan fingerprints in the *referer*: a real browser never arrives
+// with one of these in its Referer header, so a hit on a real page (/) carrying it is a scanner
+// that guessed a WordPress URL. Catches probes that use a believable browser UA from an ASN we
+// don't yet know as a data-centre (e.g. the "?rest_route=/" sprays from TECHOFF SRV LIMITED).
+const PROBE_REF_RX = /rest_route=|wp-json|wp-login|wp-admin|xmlrpc\.php|wlwmanifest|\/wp-(?:content|includes|config)|[?&]author=\d/i;
 
-function botReason(path, ua, asn) {
+function botReason(path, ua, asn, ref) {
   if (!PAGES.has(path)) return "probe";
+  if (ref && PROBE_REF_RX.test(ref)) return "probe";
   if (!ua || !BROWSER_UA_RX.test(ua) || BOT_UA_RX.test(ua)) return "ua";
   if (asn && DC_ASN_RX.test(asn)) return "dc";
   return null;
@@ -76,6 +82,7 @@ export async function onRequest(context) {
     const salt = (env.IP_SALT || "ai-map") + day;
     const ua = request.headers.get("user-agent") || null;
     const asn = cf.asOrganization || null;
+    const ref = request.headers.get("referer") || null;
 
     // Owner self-exclusion. ?self=1 opts this browser out (sets a 1-year cookie); ?self=0 opts
     // back in (clears it). Otherwise fall back to the cookie or the OWNER_IPS allowlist.
@@ -90,7 +97,7 @@ export async function onRequest(context) {
       isSelf = false;
       setCookie = "aimap_self=; Path=/; Max-Age=0; SameSite=Lax";
     }
-    const reason = isSelf ? "self" : botReason(p, ua, asn);
+    const reason = isSelf ? "self" : botReason(p, ua, asn, ref);
 
     const task = (async () => {
       const iph = await ipHash(ip, salt);
@@ -107,7 +114,7 @@ export async function onRequest(context) {
           cf.colo || null,
           asn,
           ua,
-          request.headers.get("referer") || null,
+          ref,
           iph,
           reason
         )

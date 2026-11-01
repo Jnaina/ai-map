@@ -163,12 +163,16 @@
     if (archive) return archive;
     archive = [];
     try {
-      const a = await (await fetch("data/articles.json", { cache: "no-store" })).json();
-      const seen = new Set();
+      // Let the browser honour the file's Cache-Control (max-age=60 + ETag) instead of forcing a
+      // cold download every page load: repeat visits/navigations revalidate cheaply (304) or serve
+      // from cache. A live backend build clears `archive` (see applyUpdate), so a search after an
+      // update re-reads the file; worst-case staleness for search results is ~60s, which is fine.
+      const a = await (await fetch("data/articles.json")).json();
+      // No client dedupe: the DB keys articles by URL (one row per URL) and the export groups each
+      // URL under exactly one source, so the flattened list is already unique.
       for (const [source, items] of Object.entries(a.articles || {})) {
         for (const it of items) {
-          if (!it.url || seen.has(it.url)) continue;
-          seen.add(it.url);
+          if (!it.url) continue;
           archive.push({
             title: it.title || "", url: it.url, source,
             published: new Date((+it.published || 0) * 1000).toISOString(),
@@ -436,6 +440,13 @@
       const hits = (await getArchive()).filter((a) => a.title.toLowerCase().includes(q));
       renderSearchPanel(raw, hits);
     });
+
+    // Warm the 90-day archive in the background once, when the browser is idle, so the first search
+    // for something that isn't an on-map node is instant instead of paying a cold fetch+parse. Only
+    // the initial load prefetches; after a live update clears `archive`, the next real search re-reads
+    // it (cheaply, now that the fetch is cacheable) rather than re-downloading on every build.
+    if (window.requestIdleCallback) requestIdleCallback(() => getArchive(), { timeout: 4000 });
+    else setTimeout(() => getArchive(), 2500);
 
     // activity tracking (for idle-aware live updates) + the "fresh data" pill
     ["pointerdown", "wheel", "keydown", "touchstart", "mousemove"].forEach((ev) =>

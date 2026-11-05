@@ -1,5 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /stats.html
-
-Sitemap: https://ai-news.jagular.io/sitemap.xml

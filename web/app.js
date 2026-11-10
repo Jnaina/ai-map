@@ -597,9 +597,12 @@
     const prev = new Set(feedUrls);  // the build we were showing; after the first paint, anything not in it is new
     list.innerHTML = items.map((it) => {
       const fresh = !firstFeed && !prev.has(it.url);  // first paint: show the list without flashing every row
-      return `<li><a class="feed-item${fresh ? " is-new" : ""}" href="${esc(it.url)}" target="_blank" rel="noopener">`
+      const disc = it.d && /^https:\/\/news\.ycombinator\.com\/item\?id=\d+$/.test(it.d) ? it.d : "";
+      return `<li${disc ? ` class="has-disc"` : ""}><a class="feed-item${fresh ? " is-new" : ""}" href="${esc(it.url)}" target="_blank" rel="noopener">`
         + `<span class="ft">${esc(it.title)}</span>`
-        + `<span class="fs">${esc(it.source || "")}<span class="fage" data-ts="${+it.first_seen || 0}"></span></span></a></li>`;
+        + `<span class="fs">${esc(it.source || "")}<span class="fage" data-ts="${+it.first_seen || 0}"></span></span></a>`
+        + (disc ? `<a class="fdisc" href="${esc(disc)}" target="_blank" rel="noopener" title="Open the Hacker News discussion">Discussion</a>` : "")
+        + `</li>`;
     }).join("");
     feedUrls = order;
     firstFeed = false;

@@ -156,6 +156,12 @@ dialog h3{font-size:11px;color:var(--mid);text-transform:uppercase;letter-spacin
 .feed-item .fs{display:block;margin-top:2px;font-size:8px;color:var(--mid);letter-spacing:.3px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .feed-item .fage{color:var(--soft)}
+/* Hacker News items: a small "Discussion" pill linking to the HN thread (a sibling link, not nested) */
+.feed-list li.has-disc{position:relative}
+.feed-list li.has-disc .feed-item .fs{padding-right:64px}
+.fdisc{position:absolute;right:8px;bottom:4px;font-size:8px;line-height:1;letter-spacing:.3px;padding:2px 5px;
+  border:1px solid var(--accent);border-radius:6px;color:var(--accent);text-decoration:none;background:rgba(255,255,255,.55)}
+.fdisc:hover,.fdisc:focus-visible{background:var(--accent);color:#fff;outline:none}
 .feed-item .fage:not(:empty)::before{content:" · "}
 /* a genuinely new item streams in at the top and flashes once */
 @keyframes feedin{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}

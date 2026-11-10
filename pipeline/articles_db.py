@@ -288,10 +288,14 @@ def write_new_counts(db_path=DB_PATH, out_path=NEW_COUNTS_PATH, window_s=3600,
     # `latest_window_s` (24 h), newest-discovered first. Capped at `latest_max` so the tiny
     # new_counts.json the page polls every 90s can't balloon on a busy day; the HUD scrolls through
     # them and eases back to the top when the viewer stops scrolling.
+    # Hacker News items also carry their discussion thread (`d`), shown as a "Discussion" button in
+    # the ticker. Only when it differs from the article url (Ask/Show HN posts without a link point
+    # at the thread already).
     latest = [
-        {"title": t, "source": s, "url": u, "first_seen": fs}
-        for (t, s, u, fs) in conn.execute(
-            "SELECT title, source, url, first_seen FROM articles "
+        dict({"title": t, "source": s, "url": u, "first_seen": fs},
+             **({"d": d} if s == "Hacker News" and d and "news.ycombinator.com/item" in d and d != u else {}))
+        for (t, s, u, fs, d) in conn.execute(
+            "SELECT title, source, url, first_seen, discussion FROM articles "
             "WHERE title IS NOT NULL AND title <> '' AND first_seen >= ? "
             "ORDER BY first_seen DESC, published DESC LIMIT ?",
             (now - latest_window_s, latest_max)

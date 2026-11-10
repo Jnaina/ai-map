@@ -48,7 +48,7 @@ RSS_FEEDS = [
     # AI labs, frameworks and researchers (AI-only feeds, trusted as-is / not gated).
     ("Anthropic", "https://rss.libertas.systems/feeds/anthropic-news.xml", 1.2),  # libertas mirror (plain request; migrated off the bestblogs RSSHub mirror whose /engineering route broke upstream)
     ("Anthropic Research", "https://rss.libertas.systems/feeds/anthropic-research.xml", 1.2),  # anthropic.com/research/ (libertas mirror; plain request)
-    ("Anthropic Engineering", "https://rss.libertas.systems/feeds/anthropic-engineering.xml", 1.2),  # the RSSHub /anthropic/engineering route broke upstream (503 across instances) ~2026-10-19; this mirror is fresh (loads on plain request) and the conoro GH-Pages feed is stale since late 2025
+    ("Anthropic Engineering", "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_engineering.xml", 1.2),  # 2026-11-10: libertas mirror stale since 2026-05-25; Olshansk/rss-feeds generated feed is current (no official RSS). Anthropic now files these posts under /research/
     ("Anthropic Red Teaming", "https://raw.githubusercontent.com/0xSMW/rss-feeds/main/feeds/feed_anthropic_red.xml", 1.1),  # Anthropic frontier-safety/red-team + cyber-capability posts; no official RSS, so a generated feed from the 0xSMW/rss-feeds GH repo (personal mirror -> fragile; feed-health will flag if it goes stale). Pipeline dedups by URL so overlap with the news/research feeds is harmless
     ("Thinking Machines", "https://thinkingmachines.ai/index.xml", 1.1),  # Thinking Machines Lab (Mira Murati) official feed; low-frequency (often 0 in the 7-day window until they post)
     ("Microsoft AI Blog", "https://www.microsoft.com/en-us/ai/blog/feed/", 1.0),
@@ -91,7 +91,7 @@ RSS_FEEDS = [
     ("Latent Space", "https://www.latent.space/feed", 1.0),
     ("Interconnects", "https://www.interconnects.ai/feed", 1.0),
     ("Ahead of AI", "https://magazine.sebastianraschka.com/feed", 1.0),
-    ("AI Snake Oil", "https://aisnakeoil.substack.com/feed", 0.9),
+    ("AI as Normal Technology", "https://www.normaltech.ai/feed", 0.9),  # formerly AI Snake Oil (aisnakeoil.substack.com redirects here; renamed 2026-11-10)
     ("The Algorithmic Bridge", "https://thealgorithmicbridge.substack.com/feed", 0.8),
     ("TheSequence", "https://thesequence.substack.com/feed", 0.8),
     ("One Useful Thing", "https://www.oneusefulthing.org/feed", 0.9),

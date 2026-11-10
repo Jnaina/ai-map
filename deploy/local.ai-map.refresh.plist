@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Optional: refresh the map on this Mac every 12 hours (uses your Qwen endpoint).
+     Install: cp deploy/local.ai-map.refresh.plist ~/Library/LaunchAgents/ &&
+              launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/local.ai-map.refresh.plist -->
+<plist version="1.0"><dict>
+  <key>Label</key><string>local.ai-map.refresh</string>
+  <key>ProgramArguments</key><array><string>/Users/YOUR-USER/ai-map/run.sh</string></array>
+  <key>StartInterval</key><integer>43200</integer>
+  <key>RunAtLoad</key><true/>
+  <key>StandardOutPath</key><string>/Users/YOUR-USER/ai-map/logs/launchd.log</string>
+  <key>StandardErrorPath</key><string>/Users/YOUR-USER/ai-map/logs/launchd.log</string>
+</dict></plist>

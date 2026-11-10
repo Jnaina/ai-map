@@ -1,0 +1,11 @@
+[Unit]
+Description=Jag's AI Map: fetch AI news, extract entities with Qwen (strata), rebuild map data
+After=network-online.target strata.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/ai-map
+ExecStart=/opt/ai-map/run.sh
+Nice=10
+TimeoutStartSec=20min

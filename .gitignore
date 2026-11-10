@@ -20,3 +20,8 @@ pages/dist/
 pages/.wrangler/
 pages/backup-*/
 .env
+
+# never commit
+.github/
+vb.xml
+web/data/

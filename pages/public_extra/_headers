@@ -1,0 +1,12 @@
+# Cloudflare Pages edge-cache policy. Static shell/assets cache hard (content-hashed by
+# Pages and refreshed on each deploy); the hourly data cache briefly; analytics never.
+/api/*
+  Cache-Control: no-store
+/stats.html
+  Cache-Control: no-store
+/data/*
+  Cache-Control: public, max-age=60
+/assets/*
+  Cache-Control: public, max-age=86400
+/vendor/*
+  Cache-Control: public, max-age=86400

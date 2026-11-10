@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>AI Map — Visitors</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161b22; --panel2:#1c2330; --line:#2a3240;
+    --fg:#e6edf3; --muted:#8b98a9; --accent:#4c9ffe; --bar:#2f81f7; --bar2:#3fb950;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+    padding:16px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+  header h1{font-size:17px;margin:0;font-weight:600}
+  header .sp{flex:1}
+  a.back{color:var(--muted);text-decoration:none;font-size:13px}
+  a.back:hover{color:var(--fg)}
+  select,input,button{background:var(--panel2);color:var(--fg);border:1px solid var(--line);
+    border-radius:7px;padding:7px 10px;font-size:13px}
+  button{cursor:pointer}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#031121;font-weight:600}
+  main{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+  .gate{max-width:380px;margin:12vh auto;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:24px}
+  .gate h2{margin:0 0 4px;font-size:16px}
+  .gate p{color:var(--muted);margin:0 0 16px;font-size:13px}
+  .gate input{width:100%;margin-bottom:12px}
+  .gate button{width:100%}
+  .err{color:#f85149;font-size:13px;min-height:18px;margin-top:8px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .card .n{font-size:26px;font-weight:700}
+  .card .l{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:760px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+  .panel h3{margin:0 0 12px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+  .row{display:flex;align-items:center;gap:10px;margin:5px 0}
+  .row .lab{width:46%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .track{flex:1;background:var(--panel2);border-radius:5px;height:16px;position:relative;overflow:hidden}
+  .row .fill{position:absolute;left:0;top:0;bottom:0;background:var(--bar);border-radius:5px}
+  .row .val{width:52px;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+  .days{display:flex;align-items:flex-end;gap:3px;height:80px;margin-top:6px}
+  .days .d{flex:1;background:var(--bar2);border-radius:3px 3px 0 0;min-height:2px;position:relative}
+  .days .d:hover::after{content:attr(data-t);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
+    background:#000;color:#fff;font-size:11px;padding:2px 6px;border-radius:4px;white-space:nowrap;margin-bottom:4px}
+  .days.u{height:120px;gap:2px}
+  .days.u .d{background:var(--accent)}
+  .days .d.zero{background:var(--panel2)}
+  .axis{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:4px}
+  .chart-sub{color:var(--muted);font-size:12px;margin:-6px 0 6px}
+  label.tog{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;cursor:pointer}
+  label.tog input{margin:0}
+  td.bot{color:#d29922}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--panel)}
+  td.r,th.r{text-align:right}
+  .scroll{max-height:420px;overflow:auto}
+  .muted{color:var(--muted)}
+  .flag{font-size:16px;margin-right:6px}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#3b82f6">
+</head>
+<body>
+<div id="gate" class="gate" hidden>
+  <h2>Visitor stats</h2>
+  <p>Enter the access key to view traffic for Jag's AI Map.</p>
+  <input id="key" type="password" placeholder="access key" autocomplete="current-password">
+  <button class="primary" onclick="saveKey()">View</button>
+  <div class="err" id="gateErr"></div>
+</div>
+
+<div id="app" hidden>
+  <header>
+    <h1>👥 AI Map — Visitors</h1>
+    <span class="sp"></span>
+    <label class="muted">Range
+      <select id="days" onchange="load()">
+        <option value="1">24 h</option>
+        <option value="7">7 days</option>
+        <option value="30" selected>30 days</option>
+        <option value="90">90 days</option>
+        <option value="365">1 year</option>
+      </select>
+    </label>
+    <label class="tog" title="Include crawlers, scanners and cloud/data-centre traffic"><input type="checkbox" id="bots" onchange="load()"> Include bots</label>
+    <button onclick="load()">↻ Refresh</button>
+    <button onclick="logout()">Sign out</button>
+    <a class="back" href="/">← Map</a>
+  </header>
+  <main>
+    <div class="cards">
+      <div class="card"><div class="n" id="cViews">—</div><div class="l">Page views</div></div>
+      <div class="card"><div class="n" id="cUniqDay">—</div><div class="l">Unique visitors / day</div></div>
+      <div class="card"><div class="n" id="cUniq">—</div><div class="l">Visitor-days</div></div>
+      <div class="card"><div class="n" id="cCountries">—</div><div class="l">Countries</div></div>
+      <div class="card"><div class="n" id="cCities">—</div><div class="l">Cities</div></div>
+      <div class="card"><div class="n" id="cBots">—</div><div class="l">Bot views hidden</div></div>
+    </div>
+
+    <div class="panel">
+      <h3>Unique visitors per day — last 90 days</h3>
+      <div class="chart-sub" id="u90-sub"></div>
+      <div class="days u" id="u90-chart"></div>
+      <div class="axis" id="u90-axis"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Views per day (selected range)</h3>
+      <div class="days" id="days-chart"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Last 10 visitors — where from &amp; referrer</h3>
+      <table id="last10"><thead><tr>
+        <th>Time (SGT)</th><th>Where from</th><th>Page</th><th>Referrer</th>
+      </tr></thead><tbody></tbody></table>
+    </div>
+
+    <div class="grid">
+      <div class="panel"><h3>Top countries</h3><div id="countries"></div></div>
+      <div class="panel"><h3>Top cities</h3><div id="cities"></div></div>
+      <div class="panel"><h3>Pages</h3><div id="paths"></div></div>
+      <div class="panel"><h3>Referrers</h3><div id="refs"></div></div>
+    </div>
+
+    <div class="panel"><h3>Networks (ISP / org)</h3><div id="nets"></div></div>
+
+    <div class="panel">
+      <h3>Recent visits</h3>
+      <div class="scroll">
+        <table id="recent"><thead><tr>
+          <th>Time (SGT)</th><th>Where</th><th>Page</th><th>Edge</th><th>Referrer</th><th id="botcol" hidden>Bot</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+    <p class="muted" id="foot"></p>
+  </main>
+</div>
+
+<script>
+const KEY_LS = "aimap_stats_key";
+function getKey(){ try{ return localStorage.getItem(KEY_LS)||""; }catch(e){ return ""; } }
+function setKey(k){ try{ localStorage.setItem(KEY_LS,k); }catch(e){} }
+function clearKey(){ try{ localStorage.removeItem(KEY_LS); }catch(e){} }
+
+function flag(cc){
+  if(!cc||cc.length!==2||cc==="??") return "🏳️";
+  return String.fromCodePoint(...[...cc.toUpperCase()].map(c=>0x1f1e6+c.charCodeAt(0)-65));
+}
+const esc = s => (s==null?"":String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function bars(el, rows, labeller){
+  const max = Math.max(1, ...rows.map(r=>r.c));
+  el.innerHTML = rows.length ? rows.map(r=>`
+    <div class="row">
+      <div class="lab">${labeller(r)}</div>
+      <div class="track"><div class="fill" style="width:${(r.c/max*100).toFixed(1)}%"></div></div>
+      <div class="val">${r.c.toLocaleString()}</div>
+    </div>`).join("") : '<div class="muted">No data yet.</div>';
+}
+
+async function load(){
+  const key = getKey(); if(!key) return showGate();
+  const days = document.getElementById("days").value;
+  const withBots = document.getElementById("bots").checked ? 1 : 0;
+  let data;
+  try{
+    const r = await fetch(`/api/visits?days=${days}&bots=${withBots}&key=${encodeURIComponent(key)}`, {cache:"no-store"});
+    if(r.status===401){ clearKey(); return showGate("That key was rejected."); }
+    data = await r.json();
+    if(data.error) throw new Error(data.error);
+  }catch(e){ return showGate("Error: "+e.message); }
+
+  document.getElementById("gate").hidden = true;
+  document.getElementById("app").hidden = false;
+
+  const t = data.totals||{};
+  document.getElementById("cViews").textContent = (t.views||0).toLocaleString();
+  document.getElementById("cUniq").textContent = (t.uniques||0).toLocaleString();
+  document.getElementById("cUniqDay").textContent = (t.uniquesPerDay||0).toLocaleString();
+  document.getElementById("cBots").textContent = data.bots ? "shown" : (data.botViews||0).toLocaleString();
+  document.getElementById("cCountries").textContent = data.byCountry.length;
+  document.getElementById("cCities").textContent = data.byCity.length;
+
+  // daily chart
+  const dc = document.getElementById("days-chart");
+  const dmax = Math.max(1, ...data.byDay.map(d=>d.c));
+  dc.innerHTML = data.byDay.map(d=>
+    `<div class="d" style="height:${(d.c/dmax*100).toFixed(1)}%" data-t="${d.d}: ${d.c} views, ${d.u} visitors"></div>`
+  ).join("") || '<div class="muted">No data yet.</div>';
+
+  // unique visitors per day, fixed last 90 Singapore days (zero days drawn as a stub)
+  const s90 = data.daily90||[];
+  const umax = Math.max(1, ...s90.map(d=>d.u));
+  document.getElementById("u90-chart").innerHTML = s90.map(d=>
+    `<div class="d${d.u?"":" zero"}" style="height:${d.u?(d.u/umax*100).toFixed(1):2}%" data-t="${d.d}: ${d.u} visitor${d.u===1?"":"s"}, ${d.c} views"></div>`
+  ).join("");
+  const fmt = s => new Date(s+"T00:00:00Z").toLocaleDateString(undefined,{day:"numeric",month:"short",timeZone:"UTC"});
+  document.getElementById("u90-axis").innerHTML = s90.length
+    ? `<span>${fmt(s90[0].d)}</span><span>${fmt(s90[45].d)}</span><span>${fmt(s90[s90.length-1].d)}</span>` : "";
+  const active = s90.filter(d=>d.u).length;
+  document.getElementById("u90-sub").textContent =
+    `Peak ${umax.toLocaleString()} visitors/day · ${active} day${active===1?"":"s"} with visits · Singapore time` +
+    (data.bots ? " · bots included" : " · bots excluded");
+
+  bars(document.getElementById("countries"), data.byCountry, r=>`<span class="flag">${flag(r.k)}</span>${esc(r.k)}`);
+  bars(document.getElementById("cities"), data.byCity, r=>`<span class="flag">${flag(r.country)}</span>${esc(r.k)}`);
+  bars(document.getElementById("paths"), data.byPath, r=>esc(r.k));
+  bars(document.getElementById("refs"), data.byReferer, r=>esc(r.k));
+  bars(document.getElementById("nets"), data.byNetwork, r=>esc(r.k));
+
+  document.getElementById("botcol").hidden = !data.bots;
+  const sgt = ts => new Date((ts+8*3600)*1000).toISOString().replace("T"," ").slice(0,19);
+  const tb = document.querySelector("#recent tbody");
+  tb.innerHTML = data.recent.map(v=>{
+    const where = [v.city, v.region, v.country].filter(Boolean).join(", ");
+    return `<tr>
+      <td>${sgt(v.ts)}</td>
+      <td><span class="flag">${flag(v.country)}</span>${esc(where||"—")}</td>
+      <td>${esc(v.path)}</td>
+      <td class="muted">${esc(v.colo||"")}</td>
+      <td class="muted">${esc(v.referer||"—")}</td>
+      ${data.bots ? `<td class="bot">${esc(v.bot||"")}</td>` : ""}
+    </tr>`;
+  }).join("") || '<tr><td colspan="5" class="muted">No visits recorded yet.</td></tr>';
+
+  // Last 10 visitors (most recent within the selected range/filter), newest first.
+  const last10 = (data.recent || []).slice(0, 10);
+  document.querySelector("#last10 tbody").innerHTML = last10.map(v=>{
+    const where = [v.city, v.region, v.country].filter(Boolean).join(", ");
+    const ref = (v.referer && v.referer.trim()) ? esc(v.referer) : '<span class="muted">direct</span>';
+    return `<tr>
+      <td>${sgt(v.ts)}</td>
+      <td><span class="flag">${flag(v.country)}</span>${esc(where||"—")}</td>
+      <td>${esc(v.path)}</td>
+      <td>${ref}</td>
+    </tr>`;
+  }).join("") || '<tr><td colspan="4" class="muted">No visits recorded yet.</td></tr>';
+
+  document.getElementById("foot").textContent =
+    `${(t.views||0).toLocaleString()} views over ${data.days} days` +
+    (data.bots ? "" : ` · ${(data.botViews||0).toLocaleString()} bot/probe views hidden (` +
+      (data.byBot||[]).map(b=>`${b.k}: ${b.c}`).join(", ") + ")") +
+    ` · "Visitor-days" counts a person once per day they visit · generated ${data.generated_at}`;
+}
+
+function showGate(msg){
+  document.getElementById("app").hidden = true;
+  const g = document.getElementById("gate"); g.hidden = false;
+  document.getElementById("gateErr").textContent = msg||"";
+  document.getElementById("key").focus();
+}
+function saveKey(){
+  const k = document.getElementById("key").value.trim();
+  if(!k) return;
+  setKey(k); load();
+}
+function logout(){ clearKey(); showGate(); }
+document.getElementById("key").addEventListener("keydown", e=>{ if(e.key==="Enter") saveKey(); });
+
+if(getKey()) load(); else showGate();
+</script>
+</body>
+</html>

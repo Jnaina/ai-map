@@ -1,0 +1,9 @@
+# Cloudflare Tunnel for Jag's AI Map: exposes ONLY ai-news.jagular.io
+tunnel: <TUNNEL-ID>
+credentials-file: /root/.cloudflared/<TUNNEL-ID>.json
+ingress:
+  - hostname: ai-news.jagular.io
+    service: http://127.0.0.1:80
+    originRequest:
+      httpHostHeader: ai-news.jagular.io
+  - service: http_status:404

@@ -1,0 +1,8 @@
+# The pipeline is Python standard library only, EXCEPT for this one optional dependency:
+#
+#   curl_cffi  — browser-TLS impersonation, used ONLY for feeds behind a TLS/JS bot-challenge
+#                (IMPERSONATE_FEEDS in pipeline/sources.py, e.g. VentureBeat, O'Reilly Radar).
+#                Without it, those specific feeds are skipped and everything else runs unchanged.
+#
+# Install:  python3 -m pip install --user curl_cffi    (add --break-system-packages on PEP 668 distros)
+curl_cffi>=0.16

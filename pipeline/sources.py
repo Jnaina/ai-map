@@ -186,7 +186,7 @@ RSS_FEEDS = [
     ("KTransformers (releases)", "https://github.com/kvcache-ai/ktransformers/releases.atom", 0.8),
     ("AirLLM (releases)", "https://github.com/lyogavin/airllm/releases.atom", 0.8),
     ("MLC-LLM (releases)", "https://github.com/mlc-ai/mlc-llm/releases.atom", 0.7),
-    ("llamafile (releases)", "https://github.com/Mozilla-Ocho/llamafile/releases.atom", 0.7),
+    ("llamafile (releases)", "https://github.com/mozilla-ai/llamafile/releases.atom", 0.7),
     ("LMDeploy (releases)", "https://github.com/InternLM/lmdeploy/releases.atom", 0.7),
     ("TensorRT-LLM (releases)", "https://github.com/NVIDIA/TensorRT-LLM/releases.atom", 0.7),
     ("Strata (releases)", "https://github.com/niko1221/strata/releases.atom", 0.8),

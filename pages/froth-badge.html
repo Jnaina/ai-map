@@ -1,5 +1,5 @@
-<!-- Jag's AI Frothiness Index badge (data: frothiness.jagular.io/data/badge.json, refreshed daily) -->
-<a id="froth" href="https://frothiness.jagular.io/" target="_blank" rel="noopener" hidden aria-label="Jag's AI Frothiness Index">
+<!-- AI Frothiness Index badge (data: frothiness.jagular.io/data/badge.json, refreshed daily) -->
+<a id="froth" href="https://frothiness.jagular.io/" target="_blank" rel="noopener" hidden aria-label="AI Frothiness Index">
   <svg class="fz-spark" viewBox="0 0 100 26" preserveAspectRatio="none" aria-hidden="true"><path/></svg>
   <span class="fz-num"></span>
   <span class="fz-chg"></span>
@@ -28,14 +28,14 @@
     if(lg&&getComputedStyle(lg).display!=='none'){el.style.bottom=(lg.getBoundingClientRect().height+24)+'px'}else{el.style.bottom=''}}
   fetch('https://frothiness.jagular.io/data/badge.json',{cache:'no-cache'}).then(function(r){return r.json()}).then(function(b){
     var col=COL[b.band]||'var(--ink)';
-    el.querySelector('.fz-num').textContent=Number(b.score).toFixed(1);
+    el.querySelector('.fz-num').textContent=Number(b.score).toFixed(1).replace(/\.0$/,'');   // 70.0 -> 70, 70.3 stays
     el.querySelector('.fz-num').style.color=col;
-    var d=b.d7, a=Math.abs(d)<0.5?'→ flat':(d>0?'▲ ':'▼ ')+Math.abs(d).toFixed(1);
+    var d=b.d7, a=Math.abs(d)<0.5?'→ flat':(d>0?'▲ ':'▼ ')+Math.abs(d).toFixed(1).replace(/\.0$/,'');
     el.querySelector('.fz-chg').textContent=b.band+' · '+a+(Math.abs(d)<0.5?'':' wk');
     var s=b.spark||[]; if(s.length>1){var lo=Math.min.apply(null,s),hi=Math.max.apply(null,s),rg=(hi-lo)||1,p='';
       s.forEach(function(v,i){p+=(i?'L':'M')+(i/(s.length-1)*100).toFixed(1)+' '+(24-(v-lo)/rg*22).toFixed(1)});
       var path=el.querySelector('.fz-spark path');path.setAttribute('d',p);path.style.stroke=col}
-    el.title="Jag's AI Frothiness Index: "+b.score+' ('+b.band+') on '+b.date+'. '+(d>0?'+':'')+d+' vs a week ago. Click for details.';
+    el.title="AI Frothiness Index: "+b.score+' ('+b.band+') on '+b.date+'. '+(d>0?'+':'')+d+' vs a week ago. Click for details.';
     el.hidden=false;place();
   }).catch(function(){});
   addEventListener('resize',place);setTimeout(place,1500);

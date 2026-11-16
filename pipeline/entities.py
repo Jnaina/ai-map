@@ -562,7 +562,10 @@ def llm_extract(stories, rec, log=print, batch=40):
                   "AI models, AI products, open-source AI projects, people known for AI, AI chips. Ignore anything "
                   "not about AI (politicians, sports, food, general software, operating systems, programming "
                   "languages) and generic terms (LLM, GPU, CPU, AI, agent). Types: Company, Model, Product, "
-                  "Open source, Person, Hardware. Reply ONLY with JSON: "
+                  "Open source, Person, Hardware. Always give each entity's common English name, translating "
+                  "non-English names to their established English form (e.g. 英伟达 -> NVIDIA, 黄仁勋 -> Jensen Huang, "
+                  "阿里巴巴/阿里 -> Alibaba, 智谱 -> Zhipu AI, 月之暗面 -> Moonshot AI, 百度 -> Baidu, 字节跳动 -> ByteDance). "
+                  "Reply ONLY with JSON: "
                   '{"items":[{"i":<headline number>,"entities":[{"name":"...","type":"..."}]}]}\n\n' + lines)
         body = json.dumps({"model": model, "temperature": 0, "messages": [{"role": "user", "content": prompt}],
                            "chat_template_kwargs": {"enable_thinking": False}}).encode()

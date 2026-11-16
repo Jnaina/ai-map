@@ -302,6 +302,14 @@ def write_new_counts(db_path=DB_PATH, out_path=NEW_COUNTS_PATH, window_s=3600,
         ).fetchall()
     ]
     conn.close()
+    # Display-only: add an English `title_en` to Mandarin ticker items so the on-map "Incoming feed"
+    # can show a translation. Additive and best-effort -- the stored original `title` is untouched,
+    # and a disabled/unreachable LLM just leaves the field off. (Only new_counts.json carries it.)
+    try:
+        from translate import annotate_latest_en
+        annotate_latest_en(latest, log=log)
+    except Exception as e:
+        log(f"[translate] skipped: {e}")
     data = dict(new_last_hour=n, window_seconds=window_s, latest_window_seconds=latest_window_s,
                 archive_total=archive_total,
                 generated_at=datetime.fromtimestamp(now, timezone.utc).isoformat(timespec="minutes"),

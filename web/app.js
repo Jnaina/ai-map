@@ -598,8 +598,12 @@
     list.innerHTML = items.map((it) => {
       const fresh = !firstFeed && !prev.has(it.url);  // first paint: show the list without flashing every row
       const disc = it.d && /^https:\/\/news\.ycombinator\.com\/item\?id=\d+$/.test(it.d) ? it.d : "";
-      return `<li${disc ? ` class="has-disc"` : ""}><a class="feed-item${fresh ? " is-new" : ""}" href="${esc(it.url)}" target="_blank" rel="noopener">`
-        + `<span class="ft">${esc(it.title)}</span>`
+      // title_en (if present) is a display-only English gloss of a Mandarin headline; the original
+      // title is kept as a hover tooltip. Everything else on the map still uses the original title.
+      const shown = it.title_en || it.title;
+      const origTip = it.title_en ? ` title="${esc(it.title)}"` : "";
+      return `<li${disc ? ` class="has-disc"` : ""}><a class="feed-item${fresh ? " is-new" : ""}" href="${esc(it.url)}" target="_blank" rel="noopener"${origTip}>`
+        + `<span class="ft">${esc(shown)}</span>`
         + `<span class="fs">${esc(it.source || "")}<span class="fage" data-ts="${+it.first_seen || 0}"></span></span></a>`
         + (disc ? `<a class="fdisc" href="${esc(disc)}" target="_blank" rel="noopener" title="Open the Hacker News discussion">Discussion</a>` : "")
         + `</li>`;

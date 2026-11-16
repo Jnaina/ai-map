@@ -59,6 +59,8 @@ RSS_FEEDS = [
     ("Last Week in AI", "https://lastweekin.ai/feed/", 0.9),
     ("Berkeley AI Research", "https://bair.berkeley.edu/blog/feed.xml", 0.9),
     ("Lilian Weng", "https://lilianweng.github.io/posts/index.xml", 0.9),
+    ("Machine Learning (Theory)", "https://hunch.net/?feed=rss2", 0.9),  # John Langford's ML-theory blog (AI/ML-only, trusted); low volume. Validated live 2026-11-16
+    ("geohot", "https://geohot.github.io/blog/feed.xml", 0.7),  # George Hotz (tinygrad/comma.ai) personal blog -> AI-gated (posts range beyond AI). Validated live 2026-11-16
     ("METR", "https://metr.org/feed.xml", 1.0),  # AI evaluations / dangerous-capability + model-autonomy research (AI-only org, trusted); validated live 2026-10-27
     ("Air Street Press", "https://press.airstreet.com/feed", 0.8),  # Nathan Benaich; author of the annual State of AI Report (AI-only, low volume, trusted); validated live 2026-10-27
     ("arXiv cs.AI", "https://export.arxiv.org/rss/cs.AI", 0.4),  # AI-only category; export.* host (rss.* returns empty); firehose -> low weight
@@ -150,6 +152,10 @@ RSS_FEEDS = [
     # China tech/policy outlets are AI-relevance gated below. Validated live 2026-10-20.
     ("ChinAI", "https://chinai.substack.com/feed", 1.0),  # Jeff Ding: weekly translations/analysis of China's AI
     ("Recode China AI", "https://recodechinaai.substack.com/feed", 0.9),  # dedicated China-AI newsletter
+    # Chinese-language AI media (dedicated AI outlets -> trusted as-is, like the other AI-only feeds).
+    # Entity extraction (Qwen) handles the Chinese text fine. Validated live 2026-11-16.
+    ("QbitAI", "https://www.qbitai.com/feed", 0.9),  # 量子位 — major Chinese AI news outlet (plain urllib OK, no impersonation)
+    ("Jiqizhixin", "http://feedmaker.kindle4rss.com/feeds/almosthuman2014.weixin.xml", 0.9),  # 机器之心 — major Chinese AI/ML outlet; WeChat feed via kindle4rss feedmaker proxy (http-only)
     ("ChinaTalk", "https://www.chinatalk.media/feed", 0.9),  # US-China tech/policy
     ("Interconnected", "https://interconnected.blog/rss/", 0.8),  # Kevin Xu: bilingual US-China tech
     ("SCMP Tech", "https://www.scmp.com/rss/36/feed", 0.9),  # South China Morning Post tech section (AI-topic feed is 404)
@@ -216,6 +222,7 @@ AI_FILTER_SOURCES = {
     "CNBC Technology", "Seeking Alpha Tech",  # all-tech/markets feeds: keep only AI-relevant items
     "Sifted", "Axios",  # startups/deals + general-news feeds: keep only AI-relevant items
     "TechRadar AI",  # consumer-tech AI tag feed carries non-AI reviews/deals: gate them out
+    "geohot",  # George Hotz personal blog: posts range beyond AI (tinygrad/comma + misc), so AI-gate
 }
 
 # Per-feed caps: keep only the N most recent items from a firehose source so it can't

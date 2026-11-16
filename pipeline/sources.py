@@ -163,6 +163,10 @@ RSS_FEEDS = [
     ("Pandaily", "https://pandaily.com/feed/", 0.7),  # Beijing tech news
     ("Import AI", "https://importai.substack.com/feed", 1.0),  # Jack Clark (Anthropic co-founder): weekly AI research + policy
     ("Data Center Knowledge", "https://www.datacenterknowledge.com/rss.xml", 0.8),  # authoritative DC trade press; AI-gated (hyperscale/GPU/power-for-AI)
+    ("DataCenterNews Asia", "https://datacenternews.asia/feed", 0.8),  # TechDay APAC DC trade press; AI-gated (neoclouds/AI DCs/GPU hosting). Validated live 2026-11-16
+    ("Uptime Institute Journal", "https://journal.uptimeinstitute.com/feed/", 0.8),  # independent DC research/commentary; AI-gated (inference/AI-era power+cooling+KPIs). Low volume, high S/N. Validated live 2026-11-16
+    ("Data Centre Review", "https://datacentrereview.com/feed/", 0.7),  # UK DC trade press; AI-gated (AI-DC capex/power, neoclouds). Validated live 2026-11-16
+    ("Blocks & Files", "https://blocksandfiles.com/feed/", 0.8),  # storage/AI-infra trade press (AI memory, agent DBs, big-data-for-AI); AI-gated. Validated live 2026-11-16
     # AI-chip / semiconductor trade press (AI-gated): feeds the "AI chips" concept (FPGA, ASIC, NPU,
     # wafer-scale, chiplets, accelerators) and the "Export controls" concept.
     ("The Next Platform", "https://www.nextplatform.com/feed/", 0.9),  # AI/HPC datacenter silicon (high volume -> capped)
@@ -212,7 +216,8 @@ AI_FILTER_SOURCES = {
     "The Information", "Semafor", "Platformer", "SemiAnalysis",
     "Quanta Magazine", "404 Media", "Databricks", "CSET",
     "ChinaTalk", "Interconnected", "SCMP Tech", "TechNode", "Pandaily",
-    "Data Center Knowledge", "VentureBeat AI", "O'Reilly Radar",
+    "Data Center Knowledge", "DataCenterNews Asia", "Uptime Institute Journal",
+    "Data Centre Review", "Blocks & Files", "VentureBeat AI", "O'Reilly Radar",
     "Lancet Digital Health", "Endpoints News", "STAT Health Tech",
     "Finextra", "Bank Automation News", "Tearsheet", "Finovate",
     "Coverager", "Insurance Innovation Reporter", "Slashdot IT",

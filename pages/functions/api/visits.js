@@ -41,7 +41,16 @@ export async function onRequestGet(context) {
   const q = (sql, start = since) => env.DB.prepare(sql).bind(start).all();
 
   try {
-    const [total, daily, byCountry, byCity, byDay, byPath, byRef, byAsn, byBot, recent, daily90] =
+    // "Open-tab visitors": people who sent a presence heartbeat on a day but never loaded the HTML
+    // that day (no bot-IS-NULL page view) — i.e. they kept the map open from an earlier day and let
+    // it live-update without reloading. ip_hash is day-salted, so matching ip_hash means same day.
+    const hbSql =
+      `SELECT ${day} d, COUNT(DISTINCT ip_hash) u FROM visits hb ` +
+      `WHERE ts>=? AND bot='heartbeat' ` +
+      `AND NOT EXISTS (SELECT 1 FROM visits v WHERE v.ip_hash=hb.ip_hash AND v.bot IS NULL) ` +
+      `GROUP BY d ORDER BY d`;
+
+    const [total, daily, byCountry, byCity, byDay, byPath, byRef, byAsn, byBot, recent, daily90, hb] =
       await Promise.all([
         q(`SELECT COUNT(*) views FROM visits WHERE ts>=?${human}`),
         q(`SELECT ${day} d, COUNT(DISTINCT ip_hash) u FROM visits WHERE ts>=?${human} GROUP BY d`),
@@ -51,14 +60,18 @@ export async function onRequestGet(context) {
         q(`SELECT path k, COUNT(*) c FROM visits WHERE ts>=?${human} GROUP BY k ORDER BY c DESC LIMIT 25`),
         q(`SELECT referer k, COUNT(*) c FROM visits WHERE ts>=?${human} AND referer IS NOT NULL AND referer<>'' GROUP BY k ORDER BY c DESC LIMIT 25`),
         q(`SELECT COALESCE(asn,'(unknown)') k, COUNT(*) c FROM visits WHERE ts>=?${human} GROUP BY k ORDER BY c DESC LIMIT 25`),
-        q(`SELECT bot k, COUNT(*) c FROM visits WHERE ts>=? AND bot IS NOT NULL GROUP BY k ORDER BY c DESC`),
+        // heartbeat tags are humans, not bots/probes: exclude them from the bot accounting
+        q(`SELECT bot k, COUNT(*) c FROM visits WHERE ts>=? AND bot IS NOT NULL AND bot NOT IN ('heartbeat','self-heartbeat') GROUP BY k ORDER BY c DESC`),
         q(`SELECT ts,path,country,city,region,colo,asn,referer,bot FROM visits WHERE ts>=?${human} ORDER BY ts DESC LIMIT 150`),
         q(`SELECT ${day} d, COUNT(*) c, COUNT(DISTINCT ip_hash) u FROM visits WHERE ts>=?${human} GROUP BY d ORDER BY d`, since90),
+        q(hbSql),
       ]);
 
     const dailyU = daily.results.map((r) => r.u);
     const sumU = dailyU.reduce((a, b) => a + b, 0);
     const botViews = byBot.results.reduce((a, r) => a + r.c, 0);
+    const hbU = hb.results.map((r) => r.u);
+    const hbSum = hbU.reduce((a, b) => a + b, 0);
 
     // fill the 90-day series so every day appears, even with no visits
     const have = Object.fromEntries(daily90.results.map((r) => [r.d, r]));
@@ -82,6 +95,13 @@ export async function onRequestGet(context) {
       },
       botViews,
       byBot: byBot.results,
+      // open-tab presence: visitors active via a still-open, self-updating tab on a day they did
+      // not (re)load the page. `perDay` is the average over days that had any; `daily` is the series.
+      openTabs: {
+        daily: hb.results,
+        total: hbSum, // visitor-days
+        perDay: hbU.length ? Math.round((hbSum / hbU.length) * 10) / 10 : 0,
+      },
       byCountry: byCountry.results,
       byCity: byCity.results,
       byDay: byDay.results,

@@ -687,6 +687,22 @@
   setInterval(refreshFeedTimes, 30000);
   // ease the incoming feed back to the top once the viewer stops scrolling it
   setInterval(snapFeedToTop, 2000);
-  // re-check promptly when the tab regains focus
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
+
+  // Presence heartbeat: this page live-updates via .json polls, which generate no page-view row,
+  // so a tab left open for days would otherwise be counted only at its first load. A tiny ping to
+  // /api/ping lets the stats count still-open tabs on later days. The server dedupes to one row per
+  // visitor per day, so we can fire freely; a 30-min client throttle just avoids redundant requests.
+  let lastPing = 0;
+  function heartbeat() {
+    const now = Date.now();
+    if (now - lastPing < 30 * 60 * 1000) return;
+    lastPing = now;
+    try { fetch("api/ping", { method: "POST", keepalive: true, cache: "no-store" }); } catch (e) {}
+  }
+  heartbeat();                                   // announce this load
+  setInterval(heartbeat, 6 * 3600 * 1000);       // and roughly 4x/day while the tab stays open
+
+  // re-check promptly when the tab regains focus (and refresh presence — a tab reopened on a new
+  // day gets a new day-salted ip_hash, so this is how a long-lived tab registers that new day)
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { poll(); heartbeat(); } });
 })();

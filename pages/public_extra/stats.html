@@ -101,6 +101,7 @@
     <div class="cards">
       <div class="card"><div class="n" id="cViews">—</div><div class="l">Page views</div></div>
       <div class="card"><div class="n" id="cUniqDay">—</div><div class="l">Unique visitors / day</div></div>
+      <div class="card"><div class="n" id="cOpenTabs">—</div><div class="l">Open-tab visitors / day</div></div>
       <div class="card"><div class="n" id="cUniq">—</div><div class="l">Visitor-days</div></div>
       <div class="card"><div class="n" id="cCountries">—</div><div class="l">Countries</div></div>
       <div class="card"><div class="n" id="cCities">—</div><div class="l">Cities</div></div>
@@ -188,6 +189,7 @@ async function load(){
   document.getElementById("cViews").textContent = (t.views||0).toLocaleString();
   document.getElementById("cUniq").textContent = (t.uniques||0).toLocaleString();
   document.getElementById("cUniqDay").textContent = (t.uniquesPerDay||0).toLocaleString();
+  document.getElementById("cOpenTabs").textContent = ((data.openTabs&&data.openTabs.perDay)||0).toLocaleString();
   document.getElementById("cBots").textContent = data.bots ? "shown" : (data.botViews||0).toLocaleString();
   document.getElementById("cCountries").textContent = data.byCountry.length;
   document.getElementById("cCities").textContent = data.byCity.length;

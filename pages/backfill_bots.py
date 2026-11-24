@@ -28,10 +28,10 @@ BOT_UA = re.compile(
     r"claude|perplexity|ccbot|amazonbot|applebot|\+https?://", re.I)
 DC_ASN = re.compile(
     r"google|amazon|aws|microsoft|azure|digital ?ocean|linode|akamai|ovh|hetzner|vultr|choopa|"
-    r"constant company|oracle|alibaba|tencent|huawei|contabo|m247|leaseweb|techoff|palo alto|virtualine|ghosty|"
+    r"constant company|oracle|alibaba|aliyun|aceville|collyer quay|tencent|huawei|contabo|m247|leaseweb|techoff|palo alto|virtualine|ghosty|neroso|anthropic|online sas|"
     r"cloudflare|dedik|egihosting|hostpapa|custodiandc|green floid|web2objects|aventice|virtual systems|"
     r"scaleway|netcup|ionos|hostinger|godaddy|datacamp|code200|hostroyale|mevspace|blatant|subnet digital|"
-    r"railway|fly\.io|render|vercel|netlify|heroku|data ?cent(er|re)|hosting|server|vps|cloud", re.I)
+    r"flux telecom|b2 net solutions|servermania|content delivery network|railway|fly\.io|render|vercel|netlify|heroku|data ?cent(er|re)|hosting|server|vps|cloud", re.I)
 # WordPress / CMS vulnerability-scan fingerprints in the referer: a real browser never arrives with
 # one of these, so a hit on a real page carrying it is a scanner that guessed a WordPress URL.
 PROBE_REF = re.compile(

@@ -1,0 +1,23 @@
+/* Explore menu: one dropdown for Map, Articles, Topics, Frothiness and Newsletters (shared by every page) */
+.explore{position:relative;display:inline-block}
+.explore-btn{font:inherit;font-size:12px;padding:5px 10px;border:1px solid var(--ink,#1d1d1d);background:#fff;color:var(--ink,#1d1d1d);
+  cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;border-radius:0}
+.explore-btn:hover,.explore-btn[aria-expanded="true"]{background:var(--ink,#1d1d1d);color:var(--bg,#f6f5f2)}
+.explore-dot{width:7px;height:7px;border-radius:50%;background:#d00;display:inline-block}
+.explore-dot[hidden]{display:none}
+.explore-list{position:absolute;top:calc(100% + 6px);left:0;min-width:240px;max-width:calc(100vw - 24px);background:#fff;
+  border:1px solid var(--ink,#1d1d1d);box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:50}
+.explore-list[hidden]{display:none}
+.explore-list a{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:9px 12px;text-decoration:none;
+  color:var(--ink,#1d1d1d);font-size:12.5px;border-bottom:1px solid #dcdbd7;white-space:nowrap}
+.explore-list a:last-child{border-bottom:0}
+.explore-list a:hover,.explore-list a:focus{background:var(--ink,#1d1d1d);color:var(--bg,#f6f5f2);outline:none}
+.explore-list a.cur{font-weight:700}
+.explore-list a.explore-sep{border-top:1px solid var(--ink,#1d1d1d)}
+.explore-sub{color:#6f6f6f;font-size:11px;font-weight:400}
+.explore-sub.new{color:#d00;font-weight:600}
+.explore-sub[hidden]{display:none}
+.explore-list a:hover .explore-sub,.explore-list a:focus .explore-sub{color:#b9b9b6}
+@media (max-width:760px){.explore-list{left:auto;right:0}}
+/* while the menu is open, lift the header above the map's filter chips and side panel */
+#bar:has(.explore-list:not([hidden])){z-index:100}

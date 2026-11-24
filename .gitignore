@@ -21,6 +21,10 @@ pages/dist/
 pages/.wrangler/
 pages/backup-*/
 .env
+# HN dead-post rescue: the separate HN account's session cookie, and its state/decision log
+.hn_cookie
+data/hn-dead-state.json
+data/hn-dead-log.jsonl
 
 # never commit
 .github/

@@ -413,6 +413,8 @@ def main():
         return e not in NOT_AI_SPECIFIC and rec.ents[e]["type"] != "Concept" or e in AI_CONCEPTS
 
     def ai_relevant(s):
+        if s.get("ai_verified"):  # rescued dead HN post, already judged a genuine AI article (hn_dead.py)
+            return True
         return bool(AI_RX.search(s.get("text") or s["title"] or "")) \
             or any(ai_specific(e) for e in mentions[s["id"]])
 

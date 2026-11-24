@@ -555,6 +555,33 @@ def fetch_rss(name, url, weight, since, log):
     return out
 
 
+# Last-good Hacker News results. When an Algolia request times out, reusing the previous run's
+# stories keeps HN on the map instead of dropping ~1000 stories for one run (which made the map,
+# the story counts and the "breaking" list flicker). Only reused while fresh (HN_FALLBACK_MAX_AGE);
+# the failure is still logged as "  ! ..." so feed_health/feed_alert see the real fetch result.
+HN_LAST_GOOD = os.path.join(FEED_CACHE_DIR, "hn_last_good.json")
+HN_FALLBACK_MAX_AGE = 3 * 3600
+
+
+def _hn_cache_load():
+    try:
+        with open(HN_LAST_GOOD) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _hn_cache_save(cache):
+    try:
+        os.makedirs(FEED_CACHE_DIR, exist_ok=True)
+        tmp = HN_LAST_GOOD + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(cache, f)
+        os.replace(tmp, HN_LAST_GOOD)
+    except Exception:
+        pass
+
+
 def fetch_hn(since, log, max_pages=8):
     """Every HN submission in the window (the /newest firehose, ANY score) + the current front page.
 
@@ -596,6 +623,31 @@ def fetch_hn(since, log, max_pages=8):
     # feed_alert, while every real fetch since had succeeded. A success line lets the streak clear.
     if fp_ok:
         log(f"  Hacker News front page: {fp_n} stories")
+    cache = _hn_cache_load()
+    now = time.time()
+
+    def reuse(part, label):
+        """Add the last good stories of one sub-fetch (front page / firehose) if still fresh."""
+        c = cache.get(part) or {}
+        age = now - (c.get("at") or 0)
+        if not c.get("items") or age > HN_FALLBACK_MAX_AGE:
+            log(f"  (Hacker News {label} fallback: no fresh last-good copy)")
+            return 0
+        before = len(out)
+        for st in c["items"]:
+            if (st.get("published") or 0) >= since and st["id"] not in seen:
+                seen.add(st["id"])
+                out.append(st)
+        n = len(out) - before
+        # deliberately NOT in the "<name>: N stories" form, so feed_health still counts this run as failed
+        log(f"  (Hacker News {label} fallback: reusing {n} from last good fetch, {age / 60:.0f} min old)")
+        return n
+
+    if fp_ok:
+        cache["fp"] = dict(at=now, items=out[:fp_n])
+    else:
+        reuse("fp", "front page")
+        fp_n = len(out)
 
     # 2) the /newest firehose: every story submitted in the window, no points floor
     page = 0
@@ -619,6 +671,22 @@ def fetch_hn(since, log, max_pages=8):
     # yielded stories, so treat that as a success.
     if not (fh_failed and page == 0):
         log(f"  Hacker News firehose: {len(out) - fp_n} stories")
+    if not fh_failed:
+        cache["fh"] = dict(at=now, items=out[fp_n:])
+    elif page == 0:
+        reuse("fh", "firehose")
+    if fp_ok or not fh_failed:
+        _hn_cache_save(cache)
+    # 3) dead posts that pass the rescue rules (not Show HN, not GitHub, judged a genuine AI article);
+    #    needs a separate HN account's cookie in /opt/ai-map/.hn_cookie -- see pipeline/hn_dead.py
+    try:
+        import hn_dead
+        for st in hn_dead.fetch_dead(since, log, _get, lambda u, lg: fetch_article_text(u, lg, max_chars=40000)):
+            if st["id"] not in seen:
+                seen.add(st["id"])
+                out.append(st)
+    except Exception as e:
+        log(f"  ! HN dead posts: {str(e)[:80]}")
     log(f"  Hacker News: {len(out)} stories ({fp_n} front page + {len(out) - fp_n} new in window; "
         f"AI-gated downstream)")
     return out

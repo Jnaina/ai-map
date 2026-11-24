@@ -70,6 +70,10 @@ def broken_from(report):
     """{feed_name: problem_dict} for feeds currently in a BROKEN status."""
     out = {}
     for p in report.get("problems", []):
+        # "body <url>" / "favicon ..." are single page fetches, not feeds, and are only logged when they FAIL, so
+        # one bad article stayed "down" for 24 h and re-alerted hourly (24 Nov 2026). feed_events.py skips them too.
+        if str(p.get("feed", "")).startswith(("body ", "favicon")):
+            continue
         if p.get("status") in BROKEN:
             out[p["feed"]] = p
     return out

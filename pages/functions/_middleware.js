@@ -16,7 +16,7 @@
 
 const ASSET_RX = /\.(?:js|css|json|png|jpe?g|gif|svg|ico|webp|woff2?|ttf|map|txt|xml|wasm)$/i;
 
-const PAGES = new Set(["/", "/index.html", "/articles", "/articles.html"]);
+const PAGES = new Set(["/", "/index.html", "/articles", "/articles.html", "/topics", "/topics.html", "/agents", "/agents.html"]);  // /topics 2026-11-22, /agents 2026-11-25
 const BROWSER_UA_RX = /^Mozilla\/5\.0 \(/;
 // A "+http(s)://..." contact URL inside the UA is a near-universal crawler convention
 // (e.g. "Mozilla/5.0 (compatible; DataAIHub/1.0; +https://...)"); real browsers never carry one.

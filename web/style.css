@@ -57,7 +57,11 @@ button.ghost{background:transparent}
 .hullTag text{font-family:var(--mono);font-size:12px;fill:var(--ink)}
 .faded{opacity:.12}
 #panel{position:fixed;top:92px;right:20px;bottom:52px;width:380px;max-width:calc(100vw - 40px);background:#fff;border:1px solid var(--ink);
-  padding:18px 18px 12px;overflow:auto;z-index:6}
+  padding:0;overflow:hidden;z-index:6;display:flex;flex-direction:column}
+#panel[hidden]{display:none}
+/* the body scrolls, the frame (and its close button) stays put */
+#panelBody{flex:1 1 auto;min-height:0;overflow:auto;padding:18px 18px 12px;overscroll-behavior:contain}
+#panel>.close{z-index:1;top:6px;right:16px;background:#fff;border-radius:4px;line-height:1.2}
 .close{position:absolute;top:8px;right:10px;background:transparent;border:0;font-size:20px;color:var(--mid);padding:0 6px}
 #panel h2{margin:0 26px 2px 0;font-size:18px}
 .badges{display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 12px;color:var(--mid);font-size:12px}

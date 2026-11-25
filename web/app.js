@@ -21,6 +21,7 @@
   const arrow = (d) => (d.trend >= 1.5 ? " ↑" : d.trend <= 0.75 ? " ↓" : "");
 
   const view = new URLSearchParams(location.search).get("view") === "today" ? "today" : "week";
+  let deepLinked = false;  // ?node= deep link handled once
   document.querySelectorAll(".views a").forEach((a) => a.classList.toggle("on", a.dataset.view === view));
 
   // ---- graph state, reassigned on every (re)build so the shared functions below always see the
@@ -384,7 +385,12 @@
 
     applyFilters(); // honour any persisted type/status filter before we frame the view
     if (opts.transform) svg.call(zoom.transform, opts.transform); // live update: keep the viewer's view
-    else initialView();
+    else {
+      initialView();
+      // deep link from the AI Weekly newsletter: ?node=<entity id> opens with that node selected (first build only)
+      const want = new URLSearchParams(location.search).get("node");
+      if (want && !deepLinked && byId.has(want)) { deepLinked = true; setTimeout(() => focusNode(byId.get(want)), 250); }
+    }
 
     // restore the selected entity (by id) across a rebuild, if it still exists
     if (selectedId && byId.has(selectedId)) select(byId.get(selectedId));

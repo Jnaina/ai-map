@@ -45,7 +45,9 @@
   ]
 }
 </script>
-<link rel="stylesheet" href="style.css?v=20261110a">
+<link rel="stylesheet" href="style.css?v=20261120a">
+<link rel="stylesheet" href="/explore.css?v=2">
+<link rel="alternate" type="application/rss+xml" title="AI Weekly" href="/weekly/feed.xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -62,9 +64,17 @@
     <nav class="views" aria-label="Time range">
       <a href="?view=week" data-view="week">Week</a><a href="?view=today" data-view="today">Today</a>
     </nav>
-    <a class="articleslink" href="articles.html">Articles<span id="newcount" class="newcount" hidden></span></a>
-    <a class="articleslink" href="topics.html">Topics</a>
-    <a class="articleslink" href="https://frothiness.jagular.io/" title="AI Frothiness Index: a daily AI-bubble gauge">Frothiness</a>
+    <div class="explore" id="explore">
+    <button type="button" class="explore-btn" aria-haspopup="true" aria-expanded="false">Explore<span class="explore-dot" hidden></span> ▾</button>
+    <div class="explore-list" role="menu" hidden>
+      <a href="/" role="menuitem" class="cur">Map</a>
+      <a href="/articles.html" role="menuitem">Articles<span id="newcount" class="explore-sub new" hidden></span></a>
+      <a href="/topics.html" role="menuitem">Topics</a>
+      <a href="/agents.html" role="menuitem">Agent Leaderboard<span class="explore-sub">coding agents ranked</span></a>
+      <a href="https://frothiness.jagular.io/" role="menuitem">Frothiness<span class="explore-sub">AI bubble gauge ↗</span></a>
+      <a href="/weekly/" role="menuitem" class="explore-sep">Newsletters<span id="nlNew" class="explore-sub" hidden></span></a>
+    </div>
+  </div>
     <input id="search" type="search" placeholder="Search a company, model, person…" list="labels" autocomplete="off" aria-label="Search the map">
     <datalist id="labels"></datalist>
     <select id="status" aria-label="Filter by status">
@@ -130,7 +140,8 @@
 <button id="freshPill" hidden aria-live="polite" title="Load the latest build">Fresh data available · <b>Update ↻</b></button>
 
 <script src="vendor/d3.min.js"></script>
-<script src="app.js?v=20261117a"></script>
+<script src="app.js?v=20261120w"></script>
+<script src="/explore.js?v=2"></script>
 <!-- AI Frothiness Index badge (data: frothiness.jagular.io/data/badge.json, refreshed daily) -->
 <a id="froth" href="https://frothiness.jagular.io/" target="_blank" rel="noopener" hidden aria-label="AI Frothiness Index">
   <svg class="fz-spark" viewBox="0 0 100 26" preserveAspectRatio="none" aria-hidden="true"><path/></svg>

@@ -23,7 +23,8 @@ DB = "ai-map-visits"
 ACCOUNT = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "4d92d2ca307430c0f6706269f613fb47")
 
 # --- keep in sync with functions/_middleware.js ---------------------------------------
-PAGES = {"/", "/index.html", "/articles", "/articles.html", "/topics", "/topics.html"}  # /topics added 2026-11-22
+PAGES = {"/", "/index.html", "/articles", "/articles.html", "/topics", "/topics.html", "/agents", "/agents.html"}  # /topics added 2026-11-22
+WEEKLY = re.compile(r"^/weekly(/(index\.html|\d{4}-w\d{2}(\.html)?)?)?/?$")  # AI Weekly pages, added 2026-11-24 (were "probe")
 BROWSER_UA = re.compile(r"^Mozilla/5\.0 \(")
 # A "+http(s)://..." contact URL inside the UA is a near-universal crawler convention
 # (e.g. "Mozilla/5.0 (compatible; DataAIHub/1.0; +https://...)"); real browsers never carry one.
@@ -56,13 +57,14 @@ def v6_block(ip):
 # Exact UAs of known look-alike bots (keep in sync with KNOWN_BOT_UAS in _middleware.js), 2026-11-20.
 KNOWN_BOT_UAS = {
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",  # 2026-11-24 proxy crawler (5+ countries, no page script)
 }
 PROBE_REF = re.compile(
     r"rest_route=|wp-json|wp-login|wp-admin|xmlrpc\.php|wlwmanifest|/wp-(?:content|includes|config)|[?&]author=\d", re.I)
 
 
 def bot_reason(path, ua, asn, ref):
-    if path not in PAGES:
+    if path not in PAGES and not WEEKLY.match(path):
         return "probe"
     if ref and PROBE_REF.search(ref):
         return "probe"

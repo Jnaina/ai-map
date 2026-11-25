@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Coding Agent Leaderboard — Real-Time AI Heat Map</title>
+<meta name="description" content="Coding agents ranked by head-to-head votes from the Agent Duel app: Elo with uncertainty, statistical tiers, cost and speed trade-offs, head-to-head matrix and rank odds. Updated daily.">
+<link rel="canonical" href="https://ai-news.jagular.io/agents.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Real-Time AI Heat Map">
+<meta property="og:title" content="AI Coding Agent Leaderboard — Real-Time AI Heat Map">
+<meta property="og:description" content="Coding agents ranked by head-to-head votes (data: Agent Duel), with tiers, cost vs score, head-to-head and rank odds.">
+<meta property="og:url" content="https://ai-news.jagular.io/agents.html">
+<meta property="og:image" content="https://ai-news.jagular.io/og-image.png?v=2">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="articles.css?v=3">
+<link rel="stylesheet" href="/explore.css?v=2">
+<link rel="stylesheet" href="agents.css?v=1">
+<link rel="alternate" type="application/rss+xml" title="AI Weekly" href="/weekly/feed.xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#3b82f6">
+</head>
+<body class="agents-page">
+<header id="bar">
+  <div class="brand">
+    <h1>REAL-TIME AI HEAT MAP</h1>
+    <span class="tag">coding agent leaderboard</span>
+  </div>
+  <div class="controls">
+    <div class="explore" id="explore">
+    <button type="button" class="explore-btn" aria-haspopup="true" aria-expanded="false">Explore<span class="explore-dot" hidden></span> ▾</button>
+    <div class="explore-list" role="menu" hidden>
+      <a href="/" role="menuitem">Map</a>
+      <a href="/articles.html" role="menuitem">Articles</a>
+      <a href="/topics.html" role="menuitem">Topics</a>
+      <a href="/agents.html" role="menuitem" class="cur">Agent Leaderboard<span class="explore-sub">coding agents ranked</span></a>
+      <a href="https://frothiness.jagular.io/" role="menuitem">Frothiness<span class="explore-sub">AI bubble gauge ↗</span></a>
+      <a href="/weekly/" role="menuitem" class="explore-sep">Newsletters<span id="nlNew" class="explore-sub" hidden></span></a>
+    </div>
+  </div>
+    <a class="maplink" href="index.html">← Map</a>
+  </div>
+</header>
+
+<main id="ag">
+  <section class="ag-intro">
+    <h2>Which coding agent wins?</h2>
+    <p>Developers give the same task to two anonymous agents in the <a href="https://agentduel.com/leaderboard" rel="noopener">Agent Duel</a> app and vote for the better result.
+      Votes are fitted into Elo scores. <b>Data: Agent Duel</b>
+      (<a href="https://agentduel.com/leaderboard/methodology" rel="noopener">methodology</a>, <a href="https://github.com/bottomless/agent-duel" rel="noopener">source</a>);
+      this page re-presents their published numbers and is copied once a day.</p>
+    <p class="ag-stamp" id="stamp">Loading…</p>
+  </section>
+
+  <div class="ag-controls" id="controls">
+    <div class="seg" role="group" aria-label="Votes">
+      <span class="seg-l">Votes</span>
+      <button type="button" data-k="votes" data-v="all">All</button>
+      <button type="button" data-k="votes" data-v="noEarly" title="Leave out votes cast before both agents finished">Exclude early</button>
+    </div>
+    <div class="seg" role="group" aria-label="Trade-off measure">
+      <span class="seg-l">Measure</span>
+      <button type="button" data-k="metric" data-v="cost">Cost</button>
+      <button type="button" data-k="metric" data-v="time">Time</button>
+    </div>
+    <div class="seg" role="group" aria-label="Average">
+      <button type="button" data-k="stat" data-v="median">Median</button>
+      <button type="button" data-k="stat" data-v="mean">Mean</button>
+    </div>
+    <div class="labs" id="labs" aria-label="Labs"></div>
+    <input id="agSearch" type="search" placeholder="Find a model…" aria-label="Find a model" autocomplete="off">
+  </div>
+
+  <p class="ag-flip" id="flip" hidden></p>
+
+  <section class="card" id="tableCard">
+    <div class="card-h"><h3>Ranking</h3>
+      <span class="hint">Tiers group agents whose 95% ranges overlap the tier leader's: inside a tier the order isn't settled. Click a column to sort, a row for details.</span></div>
+    <div class="tbl-wrap"><table class="lb" id="lb"><thead></thead><tbody></tbody></table></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card" id="scatterCard">
+      <div class="card-h"><h3 id="scTitle">Score vs cost</h3>
+        <span class="hint">Up = stronger, left = cheaper/faster (log scale). Drag the budget to see the strongest agent you can afford. The line is the Pareto frontier: nothing beats these on both.</span></div>
+      <div class="budget"><label for="budget" id="budgetLbl">Budget per task</label>
+        <input type="range" id="budget" min="0" max="100" step="1" value="100">
+        <output id="budgetOut"></output></div>
+      <div class="chart" id="scatter"></div>
+      <p class="pick" id="budgetPick"></p>
+    </section>
+
+    <section class="card" id="compareCard">
+      <div class="card-h"><h3>Compare two agents</h3>
+        <span class="hint">Predicted from Elo vs what actually happened when they met.</span></div>
+      <div class="cmp-sel"><select id="cmpA" aria-label="First agent"></select><span>vs</span><select id="cmpB" aria-label="Second agent"></select></div>
+      <div id="cmpOut"></div>
+    </section>
+  </div>
+
+  <section class="card" id="h2hCard">
+    <div class="card-h"><h3>Head-to-head matrix</h3>
+      <span class="hint">Row agent's result against the column agent. Faded cells = few battles.</span></div>
+    <div class="seg small" role="group" aria-label="Matrix view">
+      <button type="button" data-k="h2h" data-v="actual">Actual win rate</button>
+      <button type="button" data-k="h2h" data-v="expected">Elo-predicted</button>
+      <button type="button" data-k="h2h" data-v="surprise">Surprise (actual − predicted)</button>
+      <button type="button" data-k="h2h" data-v="battles">Battles</button>
+    </div>
+    <div class="tbl-wrap"><table class="mx" id="mx"></table></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card" id="oddsCard">
+      <div class="card-h"><h3>Rank odds</h3>
+        <span class="hint">How often each agent lands at each rank across 1,000 bootstrap resamples. Outlined = 95% rank range.</span></div>
+      <div class="tbl-wrap"><table class="odds" id="odds"></table></div>
+    </section>
+    <section class="card" id="trendCard">
+      <div class="card-h"><h3>Elo by week</h3>
+        <span class="hint">Weekly fits published per model (last week partial). Hover a line; click a legend name to hide it.</span></div>
+      <div class="chart" id="trend"></div>
+      <div class="legend" id="trendLegend"></div>
+    </section>
+  </div>
+
+  <p class="ag-foot">Head-to-head, rank odds, weekly history and per-model details are published for all votes only, so they don't change with the Votes switch.
+    Cost and time are Agent Duel's difficulty-adjusted figures. Our own daily copies start 25 Nov 2026 (<a href="/data/agents/history.json">history.json</a>, <a href="/data/agents/leaderboard.json">latest.json</a>).</p>
+</main>
+
+<aside id="drawer" class="drawer" hidden aria-label="Model details">
+  <button type="button" class="drawer-x" id="drawerX" aria-label="Close">×</button>
+  <div id="drawerBody"></div>
+</aside>
+<div id="tip" class="ag-tip" hidden></div>
+
+<script src="agents.js?v=1"></script>
+<script src="/explore.js?v=2"></script>
+<script src="/ping.js?v=1"></script>
+</body>
+</html>
